@@ -94,8 +94,8 @@ export default function Library() {
         </div>
       )}
       <div className="card-warm overflow-hidden fade-up">
-        <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 border-b border-[#E7E0D6] bg-[#F4EFE6]/60 eyebrow !text-stone-500">
-          <div className="col-span-1 pl-6">#</div><div className="col-span-4">Episode</div><div className="col-span-3">Scripture</div>
+        <div className="hidden md:grid grid-cols-12 gap-4 pl-[3.75rem] pr-6 py-3 border-b border-[#E7E0D6] bg-[#F4EFE6]/60 eyebrow !text-stone-500">
+          <div className="col-span-1">#</div><div className="col-span-4">Episode</div><div className="col-span-3">Scripture</div>
           <div className="col-span-2">Themes</div><div className="col-span-2 text-right">Status</div>
         </div>
         {episodes === null ? <p className="p-6 text-stone-500 italic">Loading…</p> : episodes.length === 0 ? (

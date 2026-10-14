@@ -1,0 +1,37 @@
+{
+  "summary": "Iteration 4 testing: Setup wizard, Backup/Restore, Dashboard Upcoming panel with flagged items, Backup button visibility, Library series add/remove flow, Podcast info settings. Added /app/backend/tests/test_iteration4.py (12 pytest cases, all passing). Backend covers: GET /api/setup/status returns needs_setup=false, POST /api/setup -> 409 when users exist, POST /api/setup/restore -> 409 when users exist, GET /api/backup is admin-only (producer 403) and returns valid zip with manifest app='bible-bytes-producer' and all 8 collection db/*.json files + admin user, POST /api/backup/restore rejects invalid zip (400), wrong-app manifest (400), and backup with no admin user (400 'admin'), series/{id}/episodes creates plan item + membership and MOVES to new series (single plan item), /series/remove-episodes clears membership, invalid series_id 404, podcast info fields (show_tagline, host_names, show_description, audience) persist on PUT /api/settings and are returned in /api/settings/public, /api/plan hydrates linked episode info correctly for date-range queries used by Upcoming panel. End-to-end setup wizard verified via Playwright: wiped mongo users (count 20->0), setup-page rendered, 'Start fresh' flow filled admin wizadmin/Wizard!2026 + podcast info + Gemini default -> finish redirects to Dashboard logged in as wizadmin (/api/auth/me returned wizadmin), GET /api/settings confirmed show_tagline/host_names/show_description/audience saved. Then wiped users again, loaded 'Restore a backup' from /tmp/bb_backup.zip (325KB), setup-restore-done appeared, 'Go to sign in' button navigated to /login, admin/BibleBytes!2026 logged in successfully. Dashboard Upcoming panel verified via UI: created 5 plan items (yesterday no-ep -> Overdue, in-5 draft-ep -> Behind schedule, in-10 no-ep -> Not started, in-40 no-ep -> On track, past date linked to published ep -> hidden). All flags matched expected text exactly. 'N need attention' showed '4 need attention'. backup-download-btn visible for admin, confirmed hidden for producer (producer login had no selector match). Library (/episodes): checkbox row selects, selection bar renders, library-add-to-series-btn opens add-to-series-dialog, choosing 'No series' creates TEST_IT4_LibSeries via POST /api/series + POST /api/series/{id}/episodes, series badge renders with color dot + name, library-series-filter restricts to that series, library-remove-from-series-btn clears the badge. Full regression run: 71 passed (32 backend_test.py + 15 test_iteration2.py + 12 test_iteration4.py + 12 iteration3 cases that don't need the RSS http.server fixture); 6 iteration3 failures are environment-only (require `python3 -m http.server 8099` in /app/tests/rss_fixture — not an app bug, documented in iteration3 context). Final state: admin/BibleBytes!2026 works, wizadmin removed by restore, all TEST_IT4_* episodes/plans/series removed, it4_frontprod producer deactivated, podcast info test fields blanked, 'The God Who Sees' episode preserved.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration4.py",
+    "/app/test_reports/pytest/iteration4.xml",
+    "/app/test_reports/pytest/iteration4_full.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "backend/setup.py cleanly separates needs_setup gate, SETUP_TOKEN check, backup zip builder (manifest + db/*.json + media/) and restore_zip (validates app id + presence of admin). Good.",
+    "restore_zip strips media/ paths against MEDIA_DIR root via resolve() + parent check to prevent zip-slip. Correct.",
+    "/api/setup auto-logs-in via set_auth_cookies on the created admin — matches wizard UX requirement.",
+    "/api/backup/restore (admin-authenticated) explicitly deletes access_token/refresh_token cookies after restoring — correct because the user accounts list is replaced wholesale.",
+    "planner.add_episodes_to_series uses upsert-style update_one then insert_one; MOVE semantics (single plan item per episode) verified. Good.",
+    "UpcomingPanel.scheduleFlag correctly places 'ready' check BEFORE 'overdue', so past items with published/script_complete status are tagged 'ready' and then filtered out by the days>=0 || flag==overdue filter. Logic verified end-to-end.",
+    "Setup wizard validation gates (admin.password === admin.confirm, min lengths, podcast.show_name required) correctly disable Next/Finish. Good."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration4.py (new, 12 pytest cases)"
+  ],
+  "success_rate": {"backend": "100% (12/12 iteration-4; 71/77 full regression — the 6 failures are iteration-3 RSS tests that require an external fixture http.server on :8099 and are not iteration-4 regressions)", "frontend": "100% of iteration-4 critical flows (setup fresh, setup restore, dashboard upcoming all 4 flags + hidden ready, backup button role gating, library add-to-series + badge + filter + remove)"},
+  "test_credentials": "admin / BibleBytes!2026",
+  "seed_data_creation": "During run: wizadmin/Wizard!2026 (removed by restore), TEST_IT4_* episodes/plans/series (deleted post-run), it4_frontprod producer (deactivated), TEST_IT4_PAST_PUB published episode + plan_item (deleted). Backup zip at /tmp/bb_backup.zip (325KB) retained for next-agent re-use.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration-4 testids: setup-page, setup-mode-choice, setup-fresh-btn, setup-restore-btn, setup-step-admin, setup-admin-username-input, setup-admin-name-input, setup-admin-password-input, setup-admin-confirm-input, setup-next-btn, setup-back-btn, setup-step-podcast, setup-show-name-input, setup-tagline-input, setup-hosts-input, setup-description-input, setup-audience-input, setup-step-ai, setup-provider-gemini, setup-provider-openai, setup-gemini-key-input, setup-openai-key-input, setup-finish-btn, setup-restore-panel, setup-restore-input (hidden file input - use set_input_files directly on it), setup-restore-choose-btn, setup-restore-done, setup-go-login-btn, setup-token-input (only when SETUP_TOKEN env set). Dashboard: dashboard-upcoming, dashboard-flagged-count, dashboard-open-planner, upcoming-item-<id>, upcoming-flag-<id>, upcoming-status-<id>, backup-download-btn. Library: library-check-<id>, library-selection-bar, library-add-to-series-btn, library-remove-from-series-btn, library-clear-selection-btn, library-series-filter, library-series-<id> (badge), add-to-series-dialog, add-to-series-select, add-to-series-new, add-to-series-new-name, add-to-series-color-<hex>, add-to-series-save-btn. Login testid is login-submit-button (not -btn). Library route is /episodes (not /library). Episode status endpoint is POST /api/episodes/{id}/status (not PATCH), and transitions enforce draft->outline_approved->script_complete->published with content checks. For UpcomingPanel 'ready/hidden' test, directly insert a published episode + past-dated plan_item via mongo (status transition requires outline/script content). RSS iteration-3 tests need: cd /app/tests/rss_fixture && python3 -m http.server 8099 & before running pytest. pytest.ini forces -n 2 --dist loadscope — override with -o addopts=''.",
+  "rca of the issue": "N/A — no bugs found in iteration-4 scope."
+}
