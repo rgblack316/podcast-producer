@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<channel>
+<title>Bible Bytes (test feed)</title>
+<item>
+  <title>Ep 3: The Good Shepherd</title>
+  <guid>bb-test-3</guid>
+  <pubDate>Mon, 03 Mar 2025 10:00:00 GMT</pubDate>
+  <itunes:episode>3</itunes:episode>
+  <description>&lt;p&gt;We walk through Psalm 23 and John 10:11 on how Jesus cares for his sheep.&lt;/p&gt;</description>
+  <podcast:transcript url="http://localhost:8099/t3.vtt" type="text/vtt"/>
+  <enclosure url="https://example.com/3.mp3" type="audio/mpeg"/>
+</item>
+<item>
+  <title>Episode 2 - Faith Like Abraham</title>
+  <guid>bb-test-2</guid>
+  <pubDate>Mon, 17 Feb 2025 10:00:00 GMT</pubDate>
+  <content:encoded>&lt;p&gt;Genesis 22 and Hebrews 11:17-19. Trusting God when it costs everything.&lt;/p&gt;</content:encoded>
+</item>
+<item>
+  <title>#1 Welcome to Bible Bytes</title>
+  <guid>bb-test-1</guid>
+  <pubDate>Mon, 03 Feb 2025 10:00:00 GMT</pubDate>
+  <description>Why short daily scripture matters. 2 Timothy 3:16-17.</description>
+</item>
+</channel>
+</rss>

@@ -13,6 +13,8 @@ from auth import router as auth_router, seed_admin, users_router  # noqa: E402
 from core import client, db  # noqa: E402
 from episodes import router as episodes_router  # noqa: E402
 from extras import router as extras_router  # noqa: E402
+from planner import router as planner_router  # noqa: E402
+from rss_import import router as rss_router  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
@@ -25,7 +27,7 @@ async def health():
     return {"ok": True}
 
 
-for r in (auth_router, users_router, extras_router, episodes_router, settings_router, docs_router):
+for r in (auth_router, users_router, extras_router, planner_router, rss_router, episodes_router, settings_router, docs_router):
     api.include_router(r)
 app.include_router(api)
 
@@ -47,6 +49,8 @@ async def startup():
                                   {"$set": {"generating": None, "last_error": "Generation interrupted by a server restart"}})
     await db.episodes.update_many({"art_generating": {"$ne": None}},
                                   {"$set": {"art_generating": None, "art_error": "Generation interrupted by a server restart"}})
+    await db.rss_items.create_index("guid", unique=True)
+    await db.rss_jobs.update_many({"running": True}, {"$set": {"running": False}})
     await seed_admin()
 
 

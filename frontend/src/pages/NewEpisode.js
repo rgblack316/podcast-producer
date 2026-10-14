@@ -19,6 +19,7 @@ export default function NewEpisode() {
     setBusy(draftOutline ? "draft" : "save");
     try {
       const { data } = await api.post("/episodes", fromForm(form));
+      if (location.state?.plan_id) await api.patch(`/plan/${location.state.plan_id}`, { episode_id: data.id }).catch(() => {});
       if (draftOutline) {
         await api.post(`/episodes/${data.id}/outline/generate`, { notes: "" })
           .catch((e) => toast.error(`Episode saved, but outline could not start: ${errMsg(e)}`));

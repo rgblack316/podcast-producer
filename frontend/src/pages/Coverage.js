@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Lightbulb, Loader2, Plus } from "lucide-react";
+import { CalendarPlus, Lightbulb, Loader2, Plus } from "lucide-react";
+import { PlanItemDialog } from "@/components/planner/PlanItemDialog";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,6 +108,12 @@ function Suggestions({ data, onNew }) {
     } catch (e) { toast.error(errMsg(e)); } finally { setBusy(false); }
   };
   const start = (s) => navigate("/episodes/new", { state: { prefill: s } });
+  const [plan, setPlan] = useState(null);
+  const [series, setSeries] = useState([]);
+  const addToPlan = async (s) => {
+    setSeries((await api.get("/series")).data);
+    setPlan({ title: s.title, topic: s.topic, primary_scripture: s.primary_scripture, supporting_scriptures: s.supporting_scriptures, themes: s.themes, notes: s.why });
+  };
   return (
     <div className="card-warm p-6 space-y-4" data-testid="coverage-suggestions">
       <div className="flex flex-col md:flex-row md:items-end gap-3 justify-between">
@@ -130,11 +137,15 @@ function Suggestions({ data, onNew }) {
               <p className="text-sm text-stone-600">{s.topic}</p>
               <p className="text-xs text-stone-500 flex-1">{s.why}</p>
               <div className="flex flex-wrap gap-1">{s.themes.map((t) => <span key={t} className="px-2 py-0.5 rounded-full bg-[#F4EFE6] text-[11px]">{t}</span>)}</div>
-              <Button size="sm" variant="outline" className="bg-[#FFFDF9] mt-1 w-fit" onClick={() => start(s)} data-testid={`suggestion-start-${s.id}`}><Plus className="h-4 w-4 mr-1" /> Start episode</Button>
+              <div className="flex gap-2 mt-1">
+                <Button size="sm" variant="outline" className="bg-[#FFFDF9] w-fit" onClick={() => start(s)} data-testid={`suggestion-start-${s.id}`}><Plus className="h-4 w-4 mr-1" /> Start episode</Button>
+                <Button size="sm" variant="ghost" onClick={() => addToPlan(s)} data-testid={`suggestion-plan-${s.id}`}><CalendarPlus className="h-4 w-4 mr-1" /> Add to plan</Button>
+              </div>
             </div>
           ))}
         </div>
       )}
+      {plan && <PlanItemDialog item={plan} series={series} onClose={() => setPlan(null)} onSaved={() => {}} />}
     </div>
   );
 }

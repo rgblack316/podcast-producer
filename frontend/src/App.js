@@ -11,6 +11,8 @@ import Library from "@/pages/Library";
 import Settings from "@/pages/Settings";
 import Account from "@/pages/Account";
 import Coverage from "@/pages/Coverage";
+import Planner from "@/pages/Planner";
+import RssImport from "@/pages/RssImport";
 
 function Protected({ children, admin }) {
   const { user } = useAuth();
@@ -44,6 +46,8 @@ function App() {
             <Route path="/episodes/new" element={<Protected><NewEpisode /></Protected>} />
             <Route path="/episodes/:id" element={<Protected><Episode /></Protected>} />
             <Route path="/coverage" element={<Protected><Coverage /></Protected>} />
+            <Route path="/planner" element={<Protected><Planner /></Protected>} />
+            <Route path="/import" element={<Protected admin><RssImport /></Protected>} />
             <Route path="/settings" element={<Protected admin><Settings /></Protected>} />
             <Route path="/account" element={<Protected><Account /></Protected>} />
             <Route path="*" element={<Navigate to="/" replace />} />
