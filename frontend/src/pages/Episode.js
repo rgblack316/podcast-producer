@@ -16,6 +16,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { DocStage } from "@/components/DocStage";
 import { AssetsStage } from "@/components/AssetsStage";
 import { ArtworkStudio } from "@/components/ArtworkStudio";
+import { EpisodeSeries } from "@/components/EpisodeSeries";
 import { EpisodeForm, fromForm, toForm } from "@/components/EpisodeForm";
 import { SimilarEpisodes } from "@/components/SimilarEpisodes";
 
@@ -69,6 +70,7 @@ function IntakePanel({ episode, onChange, isAdmin, onDelete }) {
         {episode.primary_scripture}
       </blockquote>
       <Detail label="Topic">{episode.topic}</Detail>
+      <EpisodeSeries episode={episode} />
       <Detail label="Supporting scriptures">{(episode.supporting_scriptures || []).join("\n")}</Detail>
       {episode.themes?.length > 0 && (
         <div>

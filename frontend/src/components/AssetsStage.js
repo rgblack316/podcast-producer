@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { api, errMsg, fmtDate } from "@/lib/api";
 import { Markdown } from "@/components/Markdown";
 import { Generating } from "@/components/DocStage";
+import { FeedSyncButton } from "@/components/FeedSyncButton";
 
 const FIELDS = [
   ["description", "Episode description", false],
@@ -73,6 +74,7 @@ export function AssetsStage({ episode, providers, onChange }) {
           <Button className="rounded-full" onClick={() => generate(false)} disabled={busy || !!episode.generating} data-testid="assets-generate-btn">
             {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />} Create show notes & posts
           </Button>
+          <div><FeedSyncButton episode={episode} what="show_notes" onChange={onChange} /></div>
         </div>
       ) : (
         <>
@@ -85,7 +87,8 @@ export function AssetsStage({ episode, providers, onChange }) {
             ) : (
               <Button size="sm" variant="outline" className="bg-[#FFFDF9]" onClick={() => setEditing(true)} data-testid="assets-edit-btn"><PencilLine className="h-4 w-4 mr-1.5" /> Edit</Button>
             )}
-            <span className="ml-auto f-mono text-[11px] text-stone-500">Updated {fmtDate(assets.updated_at)} · {assets.updated_by}</span>
+            <span className="ml-auto f-mono text-[11px] text-stone-500">{assets.source === "rss" ? "From RSS feed · " : ""}Updated {fmtDate(assets.updated_at)} · {assets.updated_by}</span>
+            {!editing && <FeedSyncButton episode={episode} what="show_notes" onChange={onChange} />}
           </div>
           {FIELDS.map(([f, label, md]) => (
             <AssetBlock key={f} field={f} label={label} md={md} value={(editing ? draft : assets)[f] || ""} editing={editing}

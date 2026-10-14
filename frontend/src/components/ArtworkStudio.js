@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { API, api, errMsg } from "@/lib/api";
 import { Generating } from "@/components/DocStage";
+import { FeedSyncButton } from "@/components/FeedSyncButton";
 
 const imgUrl = (ep, img) => `${API}/episodes/${ep.id}/artwork/${img.id}.png`;
 
@@ -118,6 +119,7 @@ export function ArtworkStudio({ episode, providers, onChange }) {
 
   return (
     <div className="space-y-5" data-testid="artwork-studio">
+      <div className="flex justify-end"><FeedSyncButton episode={episode} what="artwork" onChange={onChange} /></div>
       <Chat episode={episode} art={art} onChange={onChange} providers={providers} />
       <Concepts art={art} picked={picked} onPick={pick} />
       <div className="rounded-lg bg-[#F4EFE6]/70 border border-[#E2DACD] p-4 space-y-3">

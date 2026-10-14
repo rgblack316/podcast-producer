@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Download, Loader2, PencilLine, Rss, Sparkles } from "lucide-react";
+import { Download, ImageDown, Loader2, PencilLine, Rss, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -118,6 +118,16 @@ export default function RssImport() {
         </Button>
       </div>
       <JobBar job={job} />
+      {data.counts.imported > 0 && (
+        <div className="card-warm p-4 flex flex-col sm:flex-row sm:items-center gap-3" data-testid="rss-sync-panel">
+          <p className="text-sm text-[#44403C] flex-1">Copy each imported episode's <strong>artwork</strong> and <strong>show notes</strong> from the feed into the library. Show notes you've edited or generated are never overwritten.</p>
+          <Button variant="outline" className="rounded-full bg-[#FFFDF9]" disabled={!!busy}
+            onClick={() => run("sync", () => api.post("/rss/sync-imported", { artwork: true, show_notes: true }),
+              (d) => `Updated ${d.episodes} episodes: ${d.artwork} artwork, ${d.show_notes} show notes`)} data-testid="rss-sync-imported-btn">
+            {busy === "sync" ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <ImageDown className="h-4 w-4 mr-1.5" />} Pull artwork & show notes
+          </Button>
+        </div>
+      )}
       <div className="flex flex-wrap gap-2">
         {TABS.map(([k, label]) => (
           <button key={k || "all"} onClick={() => setTab(k)} data-testid={`rss-tab-${k || "all"}`}

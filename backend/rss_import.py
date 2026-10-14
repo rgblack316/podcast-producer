@@ -61,7 +61,10 @@ def parse_feed(xml_bytes: bytes) -> list:
         transcripts = [{"url": t.get("url"), "type": (t.get("type") or "").lower()}
                        for t in it.findall("podcast:transcript", NS) if t.get("url")]
         enclosure = it.find("enclosure")
+        img = it.find("itunes:image", NS)
         items.append({
+            "image_url": (img.get("href") if img is not None else "") or "",
+            "summary": strip_html(_text(it, "itunes:subtitle") or _text(it, "itunes:summary")),
             "guid": guid, "title": title, "published_at": pub_iso, "episode_number": _episode_number(it, title),
             "season": _text(it, "itunes:season"),
             "description": strip_html(_text(it, "content:encoded") or _text(it, "description") or _text(it, "itunes:summary")),
@@ -289,5 +292,87 @@ async def import_items(body: IdsIn, admin: dict = Depends(require_admin)):
                    "published_at": d.get("published_at") or now_iso()})
         await db.episodes.insert_one(ep)
         await db.rss_items.update_one({"id": d["id"]}, {"$set": {"status": "imported", "episode_id": ep["id"]}})
+        await sync_episode_from_feed(ep["id"], d, admin)
         imported += 1
     return {"imported": imported, "skipped": skipped}
+
+
+def _summary(item: dict) -> str:
+    if item.get("summary") and item["summary"] != item.get("description"):
+        return item["summary"][:600]
+    first = (item.get("description") or "").split("\n\n")[0]
+    return first[:600]
+
+
+async def sync_episode_from_feed(ep_id: str, item: dict, user: dict, artwork=True, show_notes=True) -> dict:
+    """Copy the feed's episode artwork and show notes onto a library episode (never overwrites edited notes)."""
+    from extras import save_image_bytes  # local import avoids a cycle
+    ep = await db.episodes.find_one({"id": ep_id}, {"_id": 0, "artwork": 1, "assets": 1})
+    result = {"artwork": False, "show_notes": False}
+    if ep is None:
+        return result
+    if show_notes and item.get("description") and (not ep.get("assets") or (ep["assets"] or {}).get("source") == "rss"):
+        await db.episodes.update_one({"id": ep_id}, {"$set": {"assets": {
+            "show_notes": item["description"], "description": _summary(item), "social_posts": "",
+            "source": "rss", "updated_at": now_iso(), "updated_by": user["username"], "provider": "rss feed"}}})
+        result["show_notes"] = True
+    url = item.get("image_url")
+    images = ((ep.get("artwork") or {}).get("images")) or []
+    if artwork and url and not any(i.get("source_url") == url for i in images):
+        try:
+            async with httpx.AsyncClient(timeout=60, headers=UA) as c:
+                r = await c.get(url, follow_redirects=True)
+            r.raise_for_status()
+            if not r.headers.get("content-type", "").startswith("image/"):
+                raise ValueError("not an image")
+            await save_image_bytes(ep_id, r.content, {"prompt": "Imported from RSS feed", "provider": "rss",
+                                                      "source_url": url, "created_by": user["username"]})
+            result["artwork"] = True
+        except (httpx.HTTPError, ValueError) as e:
+            log.warning("artwork import failed for %s: %s", ep_id, e)
+    return result
+
+
+class SyncIn(BaseModel):
+    artwork: bool = True
+    show_notes: bool = True
+
+
+async def _refresh_feed(admin: dict):
+    s = await llm.get_settings()
+    if s.get("rss_feed_url"):
+        try:
+            await fetch_feed(FetchIn(feed_url=None), admin)
+        except HTTPException as e:
+            log.warning("feed refresh failed: %s", e.detail)
+
+
+@router.post("/sync-imported")
+async def sync_imported(body: SyncIn, admin: dict = Depends(require_admin)):
+    await _refresh_feed(admin)
+    totals = {"episodes": 0, "artwork": 0, "show_notes": 0}
+    items = await db.rss_items.find({"status": "imported"}, NO_ID).to_list(5000)
+    for item in items:
+        ep = await db.episodes.find_one({"rss_guid": item["guid"]}, {"_id": 0, "id": 1})
+        if not ep:
+            continue
+        r = await sync_episode_from_feed(ep["id"], item, admin, body.artwork, body.show_notes)
+        totals["episodes"] += 1
+        totals["artwork"] += int(r["artwork"])
+        totals["show_notes"] += int(r["show_notes"])
+    return totals
+
+
+@router.post("/episode/{ep_id}/sync")
+async def sync_one(ep_id: str, body: SyncIn, admin: dict = Depends(require_admin)):
+    ep = await db.episodes.find_one({"id": ep_id}, {"_id": 0, "rss_guid": 1})
+    if not ep or not ep.get("rss_guid"):
+        raise HTTPException(status_code=400, detail="This episode was not imported from the RSS feed")
+    await _refresh_feed(admin)
+    item = await db.rss_items.find_one({"guid": ep["rss_guid"]}, NO_ID)
+    if not item:
+        raise HTTPException(status_code=404, detail="Episode is no longer in the feed")
+    r = await sync_episode_from_feed(ep_id, item, admin, body.artwork, body.show_notes)
+    if body.artwork and not r["artwork"] and not item.get("image_url"):
+        r["note"] = "The feed has no artwork for this episode"
+    return r

@@ -101,7 +101,8 @@ async def generate_assets(ep_id: str, body: AssetsGenIn, user: dict = Depends(ge
 @router.put("/episodes/{ep_id}/assets")
 async def save_assets(ep_id: str, body: AssetsIn, user: dict = Depends(get_current_user)):
     ep = await _get(ep_id)
-    assets = {**(ep.get("assets") or {}), **body.model_dump(), "updated_at": now_iso(), "updated_by": user["username"]}
+    assets = {**(ep.get("assets") or {}), **body.model_dump(), "source": "manual", "updated_at": now_iso(),
+              "updated_by": user["username"]}
     await db.episodes.update_one({"id": ep_id}, {"$set": {"assets": assets}})
     return await _get(ep_id)
 
@@ -256,6 +257,29 @@ async def _gemini_image(key: str, model: str, prompt: str) -> bytes:
     raise RuntimeError("Gemini returned no image. Try rephrasing the prompt.")
 
 
+async def save_image_bytes(ep_id: str, data: bytes, meta: dict) -> str:
+    img_id = new_id()
+    folder = MEDIA_DIR / ep_id
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / f"{img_id}.png").write_bytes(data)
+    ep = await _get(ep_id)
+    art = _artwork(ep)
+    img = {"id": img_id, "concept_id": None, "created_at": now_iso(), **meta}
+    await db.episodes.update_one({"id": ep_id}, {"$set": {
+        "artwork.images": art["images"] + [img], "artwork.messages": art["messages"],
+        "artwork.concepts": art["concepts"], "artwork.selected_image_id": art["selected_image_id"] or img_id}})
+    return img_id
+
+
+def _sniff(path: Path) -> str:
+    head = path.read_bytes()[:12]
+    if head.startswith(b"\xff\xd8"):
+        return "image/jpeg"
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "image/webp"
+    return "image/png"
+
+
 async def _run_image(ep_id: str, provider: str, prompt: str, concept_id: str | None, user: dict):
     try:
         s = await llm.get_settings()
@@ -301,7 +325,7 @@ async def artwork_file(ep_id: str, img_id: str, _: dict = Depends(get_current_us
     path = MEDIA_DIR / ep_id / f"{img_id}.png"
     if not path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
-    return FileResponse(path, media_type="image/png", headers={"Cache-Control": "private, max-age=86400"})
+    return FileResponse(path, media_type=_sniff(path), headers={"Cache-Control": "private, max-age=86400"})
 
 
 @router.post("/episodes/{ep_id}/artwork/{img_id}/select")
