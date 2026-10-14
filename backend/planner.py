@@ -49,6 +49,9 @@ async def delete_series(series_id: str, _: dict = Depends(get_current_user)):
     res = await db.series.delete_one({"id": series_id})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Series not found")
+    # past episodes added only for grouping have no other purpose on the plan; drop those, keep real plans
+    published = await db.episodes.distinct("id", {"status": "published"})
+    await db.plan_items.delete_many({"series_id": series_id, "episode_id": {"$in": published}, "notes": ""})
     await db.plan_items.update_many({"series_id": series_id}, {"$set": {"series_id": None}})
     return {"ok": True}
 

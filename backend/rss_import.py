@@ -311,7 +311,9 @@ async def sync_episode_from_feed(ep_id: str, item: dict, user: dict, artwork=Tru
     result = {"artwork": False, "show_notes": False}
     if ep is None:
         return result
-    if show_notes and item.get("description") and (not ep.get("assets") or (ep["assets"] or {}).get("source") == "rss"):
+    cur = ep.get("assets") or {}
+    unchanged = cur.get("show_notes") == item.get("description") and cur.get("description") == _summary(item)
+    if show_notes and item.get("description") and (not cur or cur.get("source") == "rss") and not unchanged:
         await db.episodes.update_one({"id": ep_id}, {"$set": {"assets": {
             "show_notes": item["description"], "description": _summary(item), "social_posts": "",
             "source": "rss", "updated_at": now_iso(), "updated_by": user["username"], "provider": "rss feed"}}})
