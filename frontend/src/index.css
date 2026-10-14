@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 38 45% 96%;
+        --foreground: 24 10% 10%;
+        --card: 40 100% 99%;
+        --card-foreground: 24 10% 10%;
+        --popover: 40 100% 99%;
+        --popover-foreground: 24 10% 10%;
+        --primary: 26 90% 37%;
+        --primary-foreground: 40 100% 99%;
+        --secondary: 38 38% 93%;
+        --secondary-foreground: 24 10% 10%;
+        --muted: 38 38% 93%;
+        --muted-foreground: 25 6% 45%;
+        --accent: 37 40% 90%;
+        --accent-foreground: 24 10% 10%;
+        --destructive: 0 70% 45%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 36 25% 87%;
+        --input: 36 22% 84%;
+        --ring: 26 90% 37%;
+        --radius: 0.6rem;
+    }
+}
+
+@layer base {
+    * { @apply border-border; }
+    body {
+        @apply bg-background text-foreground;
+        font-family: "Plus Jakarta Sans", ui-sans-serif, sans-serif;
+        -webkit-font-smoothing: antialiased;
+    }
+    ::selection { background: #FDE68A; color: #1C1917; }
+}
+
+.f-serif { font-family: "Newsreader", Georgia, serif; }
+.f-mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+.eyebrow {
+    font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase;
+    font-weight: 600; color: #92400E;
+}
+.paper-grain {
+    background-image: radial-gradient(rgba(120, 53, 15, 0.035) 1px, transparent 1px);
+    background-size: 3px 3px;
+}
+.card-warm {
+    background: #FFFDF9; border: 1px solid #E2DACD; border-radius: 0.85rem;
+    box-shadow: 0 4px 20px -2px rgba(44, 30, 15, 0.06), 0 2px 6px -1px rgba(44, 30, 15, 0.04);
+}
+.fade-up { animation: fadeUp 0.45s ease-out both; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.prose-bb { font-family: "Newsreader", Georgia, serif; color: #292524; font-size: 1.12rem; line-height: 1.75; max-width: 72ch; }
+.prose-bb h1 { font-size: 1.9rem; font-weight: 600; margin: 1.6rem 0 0.8rem; letter-spacing: -0.01em; color: #1C1917; }
+.prose-bb h2 { font-size: 1.5rem; font-weight: 600; margin: 1.5rem 0 0.6rem; color: #1C1917; }
+.prose-bb h3 { font-size: 1.22rem; font-weight: 600; margin: 1.2rem 0 0.4rem; color: #44403C; }
+.prose-bb h4 { font-size: 1.05rem; font-weight: 600; margin: 1rem 0 0.3rem; }
+.prose-bb p { margin: 0.6rem 0; }
+.prose-bb ul { list-style: disc; padding-left: 1.4rem; margin: 0.5rem 0; }
+.prose-bb ol { list-style: decimal; padding-left: 1.4rem; margin: 0.5rem 0; }
+.prose-bb li { margin: 0.25rem 0; }
+.prose-bb blockquote {
+    font-style: italic; background: #F4EFE6; border-left: 4px solid #B45309;
+    padding: 0.75rem 1rem; border-radius: 0.4rem; margin: 1rem 0;
+}
+.prose-bb strong { color: #1C1917; }
+.prose-bb hr { border-color: #E7E0D6; margin: 1.5rem 0; }
+.prose-bb table { border-collapse: collapse; font-size: 0.95rem; }
+.prose-bb td, .prose-bb th { border: 1px solid #E2DACD; padding: 0.35rem 0.6rem; }
+
+.ink-dot { animation: inkPulse 1.4s ease-in-out infinite; }
+@keyframes inkPulse { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }

@@ -1,0 +1,112 @@
+{
+  "project_name": "Bible Bytes - Podcast Producer Studio",
+  "app_type": "saas_app / dashboard",
+  "archetype": "ORGANIC & EARTHY / EDITORIAL WRITING ROOM",
+  "emotional_tone": "Warm, intellectual, calm, editorial, scripture-focused studio room built for long writing and episode planning sessions",
+  "typography": {
+    "heading_font": "Newsreader, Playfair Display, serif",
+    "body_font": "Plus Jakarta Sans, sans-serif",
+    "scripture_font": "Newsreader, Cormorant Garamond, serif",
+    "mono_font": "JetBrains Mono, monospace",
+    "google_fonts_link": "https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap",
+    "hierarchy": {
+      "h1": "text-3xl sm:text-4xl lg:text-5xl font-serif tracking-tight font-semibold text-[#1C1917]",
+      "h2": "text-2xl sm:text-3xl font-serif tracking-tight text-[#1C1917]",
+      "h3": "text-lg sm:text-xl font-serif font-medium text-[#292524]",
+      "subheading": "text-sm sm:text-base font-sans uppercase tracking-[0.15em] text-[#78350F] font-semibold",
+      "body": "text-base font-sans text-[#44403C] leading-relaxed",
+      "body_small": "text-sm font-sans text-[#78716C]",
+      "scripture_quote": "font-serif italic text-lg text-[#292524] bg-[#F4EFE6] p-4 rounded-md border-l-4 border-[#B45309] leading-relaxed",
+      "mono_meta": "font-mono text-xs text-[#57534E]"
+    }
+  },
+  "colors": {
+    "palette_name": "Warm Parchment & Ink",
+    "background_main": "#FAF7F2",
+    "background_card": "#FFFDF9",
+    "background_sidebar": "#F4EFE6",
+    "background_hover": "#F0E9DD",
+    "text_primary": "#1C1917",
+    "text_secondary": "#57534E",
+    "text_muted": "#78716C",
+    "accent_primary": "#B45309",
+    "accent_primary_hover": "#92400E",
+    "accent_secondary": "#C25E00",
+    "accent_green": "#3F6212",
+    "accent_amber_bg": "#FEF3C7",
+    "border_subtle": "#E7E0D6",
+    "border_focus": "#B45309",
+    "border_card": "#E2DACD",
+    "shadow_warm": "0 4px 20px -2px rgba(44, 30, 15, 0.06), 0 2px 6px -1px rgba(44, 30, 15, 0.04)",
+    "status_colors": {
+      "intake": "bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]",
+      "outline": "bg-[#E0F2FE] text-[#0369A1] border-[#BAE6FD]",
+      "script": "bg-[#F3E8FF] text-[#6B21A8] border-[#E9D5FF]",
+      "approved": "bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]",
+      "done": "bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]"
+    }
+  },
+  "layout_strategies": {
+    "header": {
+      "type": "Sticky Editorial Navigation Bar",
+      "styling": "sticky top-0 z-50 backdrop-blur-md bg-[#FAF7F2]/90 border-b border-[#E7E0D6] px-6 py-3.5 flex items-center justify-between",
+      "elements": "Brand logo 'Bible Bytes Studio', Main Nav (Dashboard, Episodes, Intake, Settings), Episode Step Indicator (Intake -> Outline -> Script -> Done), Quick Action 'New Episode', User Menu."
+    },
+    "dashboard_grid": {
+      "mode": "High Density Editorial Grid",
+      "grid_classes": "grid grid-cols-1 md:grid-cols-12 gap-6 p-6 md:p-8 max-w-7xl mx-auto",
+      "spans": {
+        "hero_banner": "col-span-full bg-gradient-to-r from-[#F4EFE6] to-[#FFFDF9] border border-[#E2DACD] p-6 rounded-xl flex items-center justify-between shadow-sm",
+        "quick_stats": "col-span-12 md:col-span-4 bg-[#FFFDF9] border border-[#E2DACD] p-5 rounded-xl",
+        "recent_episodes_table": "col-span-12 md:col-span-8 bg-[#FFFDF9] border border-[#E2DACD] p-6 rounded-xl shadow-sm",
+        "topics_themes_widget": "col-span-12 md:col-span-4 bg-[#FFFDF9] border border-[#E2DACD] p-6 rounded-xl"
+      }
+    },
+    "workspace_side_by_side": {
+      "mode": "Split Screen Editorial Writing Room",
+      "layout_classes": "grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 min-h-[calc(100vh-80px)] max-w-[1600px] mx-auto",
+      "left_pane": "lg:col-span-5 bg-[#F4EFE6]/70 border border-[#E2DACD] p-6 rounded-xl space-y-6 overflow-y-auto max-h-[85vh]",
+      "right_pane": "lg:col-span-7 bg-[#FFFDF9] border border-[#E2DACD] p-6 rounded-xl shadow-sm space-y-6 flex flex-col justify-between max-h-[85vh] overflow-y-auto"
+    }
+  },
+  "component_guidelines": {
+    "login": {
+      "style": "Warm paper card with soft serif branding, clean credentials input, demo login buttons, and high contrast submit CTA.",
+      "data_testids": ["login-container", "login-username-input", "login-password-input", "login-submit-button", "demo-login-button"]
+    },
+    "episode_intake_form": {
+      "style": "Clean multi-field editorial form (Topic, Show Title, Scripture Reference, Selected Planning Template, Target Duration). Features real-time similar-episode warning banner when topic/scripture matches past database records.",
+      "data_testids": ["intake-form", "intake-topic-input", "intake-title-input", "intake-scripture-input", "intake-template-select", "intake-similar-warning-banner", "intake-submit-button"]
+    },
+    "outline_workspace": {
+      "style": "Left panel shows Scripture study text, theme notes, and template guidelines. Right panel features an interactive outline builder with section blocks (Hook, Main Points, Scriptures, Application, Conclusion), AI revision input prompt, version history side-drawer, and 'Approve Outline' button.",
+      "data_testids": ["outline-workspace", "outline-left-scripture-panel", "outline-editor-container", "outline-ai-prompt-input", "outline-generate-btn", "outline-approve-btn", "outline-version-history-toggle"]
+    },
+    "script_workspace": {
+      "style": "Dual-pane writing workspace. Generates complete timestamped episode script based on approved outline and template. Supports custom revision prompts ('Expand exegesis', 'Add pastoral tone'), live section copy, and DOCX file export.",
+      "data_testids": ["script-workspace", "script-editor-container", "script-ai-prompt-input", "script-generate-btn", "script-copy-btn", "script-export-docx-btn"]
+    },
+    "episode_library": {
+      "style": "Structured catalog of past and active Bible Bytes episodes. Includes search input by topic/scripture, filter tabs by status and theme, data table/cards, and detail drawer.",
+      "data_testids": ["episode-library", "library-search-input", "library-theme-filter", "library-status-filter", "episode-row-item"]
+    },
+    "settings_panel": {
+      "style": "Tabbed configuration view for User Management, AI Provider & API Keys (Gemini / OpenAI toggle, model picker, secret key input), and Reference Documents uploader (.docx planning template & sample past episodes).",
+      "data_testids": ["settings-panel", "settings-ai-provider-select", "settings-api-key-input", "settings-save-api-key-btn", "settings-docx-upload-input", "settings-[#E7E0D6]-list"]
+    }
+  },
+  "media": {
+    "paper_journal_image": "https://images.unsplash.com/photo-1785783048362-97a22a3dd241?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNDR8MHwxfHNlYXJjaHwzfHx2aW50YWdlJTIwbGVhdGhlciUyMG5vdGVib29rJTIwcGFwZXIlMjBzY3JpcHR1cmUlMjBwb2RjYXN0JTIwbWljfGVufDB8fHx8MTc5MTk4MjA3MHww&ixlib=rb-4.1.0&q=85",
+    "studio_mic_image": "https://images.unsplash.com/photo-1610351038317-1baed1ec74e7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MTJ8MHwxfHNlYXJjaHwxfHx2aW50YWdlJTIwc3R1ZGlvJTIwbWljcm9waG9uZSUyMHBvZGNhc3QlMjBkZXNrfGVufDB8fHxlbnwwfHx8fDE3OTE5ODIwNzZ8MA&ixlib=rb-4.1.0&q=85",
+    "leather_journal_image": "https://images.unsplash.com/photo-1639371040157-55b642d03f4f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNDR8MHwxfHNlYXJjaHw0fHx2aW50YWdlJTIwbGVhdGhlciUyMG5vdGVib29rJTIwcGFwZXIlMjBzY3JpcHR1cmUlMjBwb2RjYXN0JTIwbWljfGVufDB8fHx8MTc5MTk4MjA3MHww&ixlib=rb-4.1.0&q=85"
+  },
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "Use ONLY JavaScript (.js / .jsx) files - DO NOT create TypeScript (.ts / .tsx) files in frontend/src.",
+    "Add Google Fonts link for 'Newsreader' and 'Plus Jakarta Sans' in frontend/public/index.html head tag.",
+    "Ensure all interactive buttons, inputs, links, tabs, and status cards have explicit data-testid attributes.",
+    "Never rely on pure transparent backgrounds for headers, dropdowns, or modals. Use backdrop-blur-md bg-[#FAF7F2]/90 or bg-[#FFFDF9].",
+    "Follow generous spacing (p-6, p-8, gap-6) and use subtle warm borders (#E7E0D6 / #E2DACD) with card surfaces (#FFFDF9).",
+    "Implement Sonner toast notifications (from src/components/ui/sonner) for key actions like Outline Approval, Script Generation, DOCX Export, and API Key saving.",
+    "Use Lucide React icons for clean, readable editorial UI (e.g., BookOpen, Sparkles, CheckCircle2, FileText, Settings, Key, Search, Copy, Download, Layers)."
+  ]
+}
