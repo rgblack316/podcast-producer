@@ -24,6 +24,7 @@ NS = {"itunes": "http://www.itunes.com/dtds/podcast-1.0.dtd", "podcast": "https:
 LIST_FIELDS = {"_id": 0, "content": 0, "description": 0}
 _tasks = set()
 CONCURRENCY = 3
+AUTH_ERROR = re.compile(r"error (401|403)\b|API key not valid|API_KEY_INVALID|invalid_api_key|Incorrect API key", re.I)
 UA = {"User-Agent": "BibleBytesProducer/1.0 (+self-hosted)"}
 
 
@@ -159,9 +160,12 @@ async def _analyze_one(item: dict, settings: dict, provider: str, client: httpx.
 async def _run_analysis(ids: list, provider: str):
     settings = await llm.get_settings()
     sem = asyncio.Semaphore(CONCURRENCY)
+    abort = {"msg": None}
     async with httpx.AsyncClient(timeout=60, headers=UA) as client:
         async def work(item_id):
             async with sem:
+                if abort["msg"]:
+                    return
                 item = await db.rss_items.find_one({"id": item_id}, NO_ID)
                 if not item:
                     return
@@ -171,10 +175,14 @@ async def _run_analysis(ids: list, provider: str):
                         "content": content, "content_source": source, "suggestion": sug, "status": "review", "error": None}})
                     await db.rss_jobs.update_one({"id": "current"}, {"$inc": {"done": 1}})
                 except Exception as e:
-                    await db.rss_items.update_one({"id": item_id}, {"$set": {"error": str(e)[:300]}})
+                    msg = str(e)
+                    if AUTH_ERROR.search(msg):
+                        abort["msg"] = msg[:300]
+                    await db.rss_items.update_one({"id": item_id}, {"$set": {"error": msg[:300]}})
                     await db.rss_jobs.update_one({"id": "current"}, {"$inc": {"done": 1, "errors": 1}})
         await asyncio.gather(*(work(i) for i in ids))
-    await db.rss_jobs.update_one({"id": "current"}, {"$set": {"running": False, "finished_at": now_iso()}})
+    await db.rss_jobs.update_one({"id": "current"}, {"$set": {
+        "running": False, "finished_at": now_iso(), "aborted": abort["msg"]}})
 
 
 class AnalyzeIn(BaseModel):
@@ -195,7 +203,7 @@ async def analyze(body: AnalyzeIn, _: dict = Depends(require_admin)):
         raise HTTPException(status_code=400, detail="Nothing to analyze")
     await db.rss_jobs.update_one({"id": "current"}, {"$set": {
         "running": True, "total": len(ids), "done": 0, "errors": 0, "provider": provider,
-        "started_at": now_iso(), "finished_at": None}}, upsert=True)
+        "started_at": now_iso(), "finished_at": None, "aborted": None}}, upsert=True)
     t = asyncio.create_task(_run_analysis(ids, provider))
     _tasks.add(t)
     t.add_done_callback(_tasks.discard)

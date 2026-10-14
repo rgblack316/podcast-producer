@@ -16,10 +16,15 @@ function JobBar({ job }) {
   return (
     <div className="card-warm p-4 space-y-2" data-testid="rss-job-progress">
       <div className="flex justify-between text-sm">
-        <span>{job.running ? "Analyzing episodes with AI…" : "Last analysis finished"}</span>
+        <span>{job.running ? "Analyzing episodes with AI…" : job.aborted ? "Analysis stopped" : "Last analysis finished"}</span>
         <span className="f-mono text-xs">{job.done}/{job.total}{job.errors ? ` · ${job.errors} errors` : ""}</span>
       </div>
       <Progress value={pct} className="h-2" />
+      {job.aborted && !job.running && (
+        <p className="text-sm text-red-700 break-words" data-testid="rss-job-aborted">
+          Stopped early because the AI provider rejected the API key. Check the key in Settings → AI provider & keys, then analyze again. ({job.aborted.slice(0, 160)})
+        </p>
+      )}
     </div>
   );
 }
