@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
@@ -214,6 +215,20 @@ async def reset_password(user_id: str, body: ResetPasswordIn, _: dict = Depends(
     res = await db.users.update_one({"id": user_id}, {"$set": {"password_hash": hash_password(body.new_password)}})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
+    return {"ok": True}
+
+
+@users_router.delete("/{user_id}")
+async def delete_user(user_id: str, admin: dict = Depends(require_admin)):
+    if user_id == admin["id"]:
+        raise HTTPException(status_code=400, detail="You cannot delete your own account")
+    user = await db.users.find_one({"id": user_id}, USER_PUBLIC)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user["role"] == "admin" and await db.users.count_documents({"role": "admin", "active": True, "id": {"$ne": user_id}}) == 0:
+        raise HTTPException(status_code=400, detail="At least one active admin must remain")
+    await db.users.delete_one({"id": user_id})
+    await db.login_attempts.delete_many({"identifier": {"$regex": f":{re.escape(user['username'])}$"}})
     return {"ok": True}
 
 

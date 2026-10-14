@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { KeyRound, UserPlus } from "lucide-react";
+import { KeyRound, Trash2, UserPlus } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -75,8 +79,15 @@ export function UsersSettings() {
   const { user: me } = useAuth();
   const [users, setUsers] = useState([]);
   const [resetting, setResetting] = useState(null);
+  const [deleting, setDeleting] = useState(null);
   const load = () => api.get("/users").then((r) => setUsers(r.data));
   useEffect(() => { load(); }, []);
+
+  const removeUser = async () => {
+    const u = deleting;
+    setDeleting(null);
+    try { await api.delete(`/users/${u.id}`); toast.success(`Deleted @${u.username}`); load(); } catch (e) { toast.error(errMsg(e)); }
+  };
 
   const patch = async (u, body) => {
     try { await api.patch(`/users/${u.id}`, body); load(); toast.success("User updated"); } catch (e) { toast.error(errMsg(e)); }
@@ -110,11 +121,29 @@ export function UsersSettings() {
               <Button variant="outline" size="sm" className="bg-[#FFFDF9]" onClick={() => setResetting(u)} data-testid={`user-reset-password-${u.username}`}>
                 <KeyRound className="h-4 w-4 mr-1" /> Reset
               </Button>
+              <Button variant="ghost" size="sm" className="text-red-700 hover:text-red-800 hover:bg-red-50" disabled={u.id === me.id}
+                title={u.id === me.id ? "You can't delete your own account" : "Delete user"} onClick={() => setDeleting(u)} data-testid={`user-delete-${u.username}`}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </li>
         ))}
       </ul>
       <ResetPassword target={resetting} onClose={() => setResetting(null)} />
+      <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+        <AlertDialogContent data-testid="delete-user-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleting?.name} (@{deleting?.username})?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the account and signs them out. Episodes they created stay in the library. To keep the account but block access, turn it to Disabled instead.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="delete-user-cancel-btn">Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-700 hover:bg-red-800" onClick={removeUser} data-testid="delete-user-confirm-btn">Delete user</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
