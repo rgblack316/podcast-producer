@@ -1,0 +1,41 @@
+{
+  "summary": "Verified RSS analyze auth-error early-abort fix end-to-end: backend aborts remaining items after first auth failure, UI shows 'Analysis stopped' + aborted message, and conftest preserves real settings/rss_items across test runs. Real Gemini key (53 chars, last4 'f7SA'), gemini_model 'gemini-3.5-flash-lite', rss_feed_url, 118 rss_items (1 in review 'Our Refuge and Strength') were snapshotted to /tmp/pre_test_snapshot.json before any testing and confirmed intact at the end.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/rss/fetch", "issue": "Several pre-existing tests in test_iteration3.py fail because the preview sandbox cannot reach the external podcast feed (podhome.fm) — 'All connection attempts failed'. Not caused by the current fix."},
+      {"endpoint": "n/a", "issue": "pytest.ini forces -n 2 --dist loadscope. The session-autouse snapshot in conftest.py runs independently per xdist worker; if worker B snapshots after worker A has already corrupted settings/rss_items, worker B's restore will put the corrupted state back as 'final'. This is the exact failure mode that originally overwrote the user's Gemini key. The conftest fix is necessary but NOT sufficient under xdist — see action items."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_abort_safe.py",
+    "/app/backend/tests/conftest.py",
+    "/tmp/pre_test_snapshot.json"
+  ],
+  "action_items": [
+    "Harden conftest.py against xdist: either (a) move the snapshot/restore to a session fixture that uses a FileLock + reference-count file so only the FIRST worker snapshots and the LAST worker restores; or (b) run the preserve fixture at scope='session' but gate it with a file lock + 'already snapshotted' marker file; or (c) remove -n 2 from pytest.ini so there is a single session. Current code snapshots per worker and will corrupt real data if a worker samples mid-run.",
+    "Consider making tests that write API keys use a dedicated test-only Mongo DB (DB_NAME override) rather than mutating the shared production-looking database.",
+    "test_iteration3 RSS fetch tests should be marked xfail or network-gated when the preview sandbox can't reach podhome.fm."
+  ],
+  "critical_code_review_comments": [
+    "rss_import.AUTH_ERROR regex is good; covers 401/403, 'API key not valid', 'API_KEY_INVALID', 'invalid_api_key', 'Incorrect API key' (OpenAI).",
+    "_run_analysis correctly short-circuits via abort flag before each work() unit begins AND still records the message of the failing item; with CONCURRENCY=3 up to 3 items may error before abort takes effect — observed exactly 3 errors / 3 untouched out of 6 in test.",
+    "conftest preserve fixture does not handle xdist (-n 2) correctly; see action_items.",
+    "/api/rss/analyze happily accepts an empty gemini_api_key setting value; consider rejecting with 400 early rather than relying on Gemini returning 400 (saves one HTTP round-trip and makes the error message cleaner)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_abort_safe.py (new)"
+  ],
+  "success_rate": {"backend": "100% for abort/UI flow (2/2 in test_abort_safe); 90% overall (69/77 across full suite, 8 pre-existing env/network failures)", "frontend": "100%"},
+  "test_credentials": "admin / BibleBytes!2026 (from /app/memory/test_credentials.md and backend/.env)",
+  "seed_data_creation": "Temporarily inserted 6 TEST_ABORT_* rss_items for abort test; all deleted in finally block. Verified count returned to 118.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "DO NOT run any test that mutates db.settings.gemini_api_key or db.rss_items without first saving a full snapshot and restoring it in a finally block — pytest.ini forces xdist -n 2 which breaks the conftest session-restore guarantee. Real Gemini key length is 53, last4 'f7SA'. Real items count is 118 with 1 in 'review' (id 28a19b83-3349-4875-99d6-68f93250dd9f, 'Our Refuge and Strength'). Feed URL: https://serve.podhome.fm/rss/30ed52a9-a11c-5235-bdfc-8e3379c6edde. Snapshot preserved at /tmp/pre_test_snapshot.json during this iteration (not guaranteed to persist across container restarts).",
+  "rca_of_the_issue": "Original bug: conftest.py did not restore shared mongo collections after test suites that wrote 'fake-key-xyz' into settings. Fix landed: (a) conftest now snapshots+restores 9 collections, (b) rss_import._run_analysis aborts remaining items on auth errors, (c) UI (RssImport JobBar) reads rss-job-aborted and shows 'Analysis stopped'. Verified: backend aborts after 3 errors on 6 items (concurrency=3), UI renders the aborted message; conftest restored data cleanly in the single-worker test. Residual risk: xdist runs still race the snapshot/restore across workers — fix in action_items."
+}
