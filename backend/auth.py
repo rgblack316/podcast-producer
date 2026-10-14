@@ -218,8 +218,11 @@ async def reset_password(user_id: str, body: ResetPasswordIn, _: dict = Depends(
 
 
 async def seed_admin():
-    username = os.environ["ADMIN_USERNAME"].strip().lower()
-    password = os.environ["ADMIN_PASSWORD"]
+    """Optional: seed/recover an admin from env. Without it, the first-run setup wizard creates the admin."""
+    username = os.environ.get("ADMIN_USERNAME", "").strip().lower()
+    password = os.environ.get("ADMIN_PASSWORD", "")
+    if not username or not password:
+        return
     existing = await db.users.find_one({"username": username})
     if existing is None:
         await db.users.insert_one(user_doc(username, "Administrator", password, "admin"))

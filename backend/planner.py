@@ -124,3 +124,39 @@ async def delete_plan(item_id: str, _: dict = Depends(get_current_user)):
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Plan item not found")
     return {"ok": True}
+
+
+class SeriesEpisodesIn(BaseModel):
+    episode_ids: List[str]
+
+
+@router.post("/series/{series_id}/episodes")
+async def add_episodes_to_series(series_id: str, body: SeriesEpisodesIn, user: dict = Depends(get_current_user)):
+    """Attach existing (e.g. past) episodes to a series; reuses or creates their plan item."""
+    if not await db.series.find_one({"id": series_id}, {"_id": 1}):
+        raise HTTPException(status_code=404, detail="Series not found")
+    eps = await db.episodes.find({"id": {"$in": body.episode_ids}}, {**EP_FIELDS, "published_at": 1}).to_list(5000)
+    added = 0
+    for ep in eps:
+        res = await db.plan_items.update_one({"episode_id": ep["id"]}, {"$set": {"series_id": series_id}})
+        if res.matched_count == 0:
+            await db.plan_items.insert_one({
+                "id": new_id(), "date": (ep.get("published_at") or "")[:10] or None, "series_id": series_id,
+                "episode_id": ep["id"], "title": ep["title"], "topic": ep.get("topic", ""),
+                "primary_scripture": ep.get("primary_scripture", ""), "supporting_scriptures": [], "themes": ep.get("themes", []),
+                "notes": "", "created_by": user["username"], "created_at": now_iso()})
+        added += 1
+    return {"added": added}
+
+
+@router.post("/series/remove-episodes")
+async def remove_episodes_from_series(body: SeriesEpisodesIn, _: dict = Depends(get_current_user)):
+    await db.plan_items.update_many({"episode_id": {"$in": body.episode_ids}}, {"$set": {"series_id": None}})
+    return {"ok": True}
+
+
+@router.get("/series/membership")
+async def series_membership(_: dict = Depends(get_current_user)):
+    items = await db.plan_items.find({"episode_id": {"$ne": None}, "series_id": {"$ne": None}},
+                                     {"_id": 0, "episode_id": 1, "series_id": 1}).to_list(10000)
+    return {i["episode_id"]: i["series_id"] for i in items}

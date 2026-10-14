@@ -35,6 +35,11 @@ def system_prompt(settings: dict, ctx: dict) -> str:
         "and > blockquotes for scripture). Do not wrap the output in code fences and do not add commentary "
         "before or after the document.",
     ]
+    about = [f"{label}: {settings.get(k)}" for k, label in
+             (("show_tagline", "Tagline"), ("host_names", "Host(s)"), ("show_description", "About the show"),
+              ("audience", "Audience")) if settings.get(k)]
+    if about:
+        parts.append("ABOUT THE SHOW\n" + "\n".join(about))
     if settings.get("extra_instructions"):
         parts.append(f"Standing instructions from the show team:\n{settings['extra_instructions']}")
     if ctx["template"]:

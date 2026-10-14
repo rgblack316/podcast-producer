@@ -1,4 +1,7 @@
 import "@/App.css";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
+import Setup from "@/pages/Setup";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
@@ -35,6 +38,17 @@ function LoginRoute() {
 }
 
 function App() {
+  const [setup, setSetup] = useState(null);
+  useEffect(() => { api.get("/setup/status").then((r) => setSetup(r.data)).catch(() => setSetup({ needs_setup: false })); }, []);
+  if (!setup) return null;
+  if (setup.needs_setup) {
+    return (
+      <div className="App">
+        <Setup tokenRequired={setup.token_required} />
+        <Toaster position="bottom-right" richColors />
+      </div>
+    );
+  }
   return (
     <div className="App">
       <AuthProvider>

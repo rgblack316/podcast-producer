@@ -26,6 +26,8 @@ def _public(s: dict) -> dict:
             "gemini_model": s["gemini_model"], "openai_model": s["openai_model"],
             "image_provider": s["image_provider"], "gemini_image_model": s["gemini_image_model"],
             "openai_image_model": s["openai_image_model"],
+            "show_tagline": s["show_tagline"], "host_names": s["host_names"],
+            "show_description": s["show_description"], "audience": s["audience"],
             "gemini_configured": bool(s["gemini_api_key"]), "openai_configured": bool(s["openai_api_key"])}
 
 
@@ -40,6 +42,10 @@ class SettingsIn(BaseModel):
     image_provider: Optional[str] = None
     gemini_image_model: Optional[str] = None
     openai_image_model: Optional[str] = None
+    show_tagline: Optional[str] = None
+    host_names: Optional[str] = None
+    show_description: Optional[str] = None
+    audience: Optional[str] = None
 
 
 @settings_router.get("/public")

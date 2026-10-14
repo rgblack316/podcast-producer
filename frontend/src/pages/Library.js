@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Layers, Search } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AddToSeriesDialog } from "@/components/AddToSeriesDialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { api, fmtDate, STATUS_LABELS } from "@/lib/api";
+import { api, errMsg, fmtDate, STATUS_LABELS } from "@/lib/api";
 import { StatusBadge } from "@/components/StatusBadge";
 
 const ALL = "__all";
@@ -26,6 +30,25 @@ export default function Library() {
   const [episodes, setEpisodes] = useState(null);
   const [meta, setMeta] = useState({ themes: [], books: [] });
   const filters = { status: params.get("status") || "", theme: params.get("theme") || "", book: params.get("book") || "" };
+  const seriesFilter = params.get("series") || "";
+  const [series, setSeries] = useState([]);
+  const [membership, setMembership] = useState({});
+  const [sel, setSel] = useState(new Set());
+  const [adding, setAdding] = useState(false);
+  const seriesById = Object.fromEntries(series.map((s) => [s.id, s]));
+  const loadSeries = () => {
+    api.get("/series").then((r) => setSeries(r.data));
+    api.get("/series/membership").then((r) => setMembership(r.data));
+  };
+  const toggle = (id, v) => { const n = new Set(sel); v ? n.add(id) : n.delete(id); setSel(n); };
+  const removeFromSeries = async () => {
+    try {
+      await api.post("/series/remove-episodes", { episode_ids: [...sel] });
+      toast.success("Removed from series");
+      setSel(new Set());
+      loadSeries();
+    } catch (e) { toast.error(errMsg(e)); }
+  };
 
   const setFilter = (k, v) => {
     const next = new URLSearchParams(params);
@@ -33,7 +56,7 @@ export default function Library() {
     setParams(next, { replace: true });
   };
 
-  useEffect(() => { api.get("/episodes/meta").then((r) => setMeta(r.data)); }, []);
+  useEffect(() => { api.get("/episodes/meta").then((r) => setMeta(r.data)); loadSeries(); }, []);
   useEffect(() => {
     const t = setTimeout(() => {
       api.get("/episodes", { params: { q, ...filters } }).then((r) => setEpisodes(r.data));
@@ -59,21 +82,38 @@ export default function Library() {
           options={meta.themes.map((t) => [t.name, t.name])} testId="library-theme-filter" />
         <FilterSelect value={filters.book} onChange={(v) => setFilter("book", v)} placeholder="All books"
           options={meta.books.map((t) => [t.name, t.name])} testId="library-book-filter" />
+        <FilterSelect value={seriesFilter} onChange={(v) => setFilter("series", v)} placeholder="All series"
+          options={series.map((x) => [x.id, x.name])} testId="library-series-filter" />
       </div>
+      {sel.size > 0 && (
+        <div className="sticky top-20 z-40 card-warm px-4 py-3 flex flex-wrap items-center gap-3" data-testid="library-selection-bar">
+          <span className="text-sm font-medium mr-auto">{sel.size} selected</span>
+          <Button size="sm" className="rounded-full" onClick={() => setAdding(true)} data-testid="library-add-to-series-btn"><Layers className="h-4 w-4 mr-1.5" /> Add to series</Button>
+          <Button size="sm" variant="outline" className="rounded-full bg-[#FFFDF9]" onClick={removeFromSeries} data-testid="library-remove-from-series-btn">Remove from series</Button>
+          <Button size="sm" variant="ghost" onClick={() => setSel(new Set())} data-testid="library-clear-selection-btn">Clear</Button>
+        </div>
+      )}
       <div className="card-warm overflow-hidden fade-up">
         <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 border-b border-[#E7E0D6] bg-[#F4EFE6]/60 eyebrow !text-stone-500">
-          <div className="col-span-1">#</div><div className="col-span-4">Episode</div><div className="col-span-3">Scripture</div>
+          <div className="col-span-1 pl-6">#</div><div className="col-span-4">Episode</div><div className="col-span-3">Scripture</div>
           <div className="col-span-2">Themes</div><div className="col-span-2 text-right">Status</div>
         </div>
         {episodes === null ? <p className="p-6 text-stone-500 italic">Loading…</p> : episodes.length === 0 ? (
           <p className="p-6 text-stone-500 italic" data-testid="library-empty">No episodes match.</p>
-        ) : episodes.map((e) => (
-          <Link key={e.id} to={`/episodes/${e.id}`} data-testid={`episode-row-item-${e.id}`}
-            className="grid grid-cols-1 md:grid-cols-12 gap-1 md:gap-4 px-6 py-4 border-b border-[#EFE8DC] last:border-0 hover:bg-[#F4EFE6]/70 transition-colors items-center">
+        ) : episodes.filter((e) => !seriesFilter || membership[e.id] === seriesFilter).map((e) => (
+          <div key={e.id} className="flex items-center border-b border-[#EFE8DC] last:border-0 hover:bg-[#F4EFE6]/70 transition-colors">
+          <div className="pl-4"><Checkbox checked={sel.has(e.id)} onCheckedChange={(v) => toggle(e.id, v)} data-testid={`library-check-${e.id}`} /></div>
+          <Link to={`/episodes/${e.id}`} data-testid={`episode-row-item-${e.id}`}
+            className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-1 md:gap-4 px-4 md:px-6 py-4 items-center min-w-0">
             <div className="md:col-span-1 f-mono text-sm text-stone-500">{e.episode_number || "—"}</div>
             <div className="md:col-span-4 min-w-0">
               <div className="f-serif text-lg text-[#1C1917] truncate">{e.title}</div>
               <div className="text-sm text-stone-500 truncate">{e.topic}</div>
+              {seriesById[membership[e.id]] && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium mt-1" data-testid={`library-series-${e.id}`}>
+                  <span className="h-2 w-2 rounded-full" style={{ background: seriesById[membership[e.id]].color }} />{seriesById[membership[e.id]].name}
+                </span>
+              )}
             </div>
             <div className="md:col-span-3 f-serif italic text-[#44403C] truncate">{e.primary_scripture}</div>
             <div className="md:col-span-2 text-xs text-stone-600 truncate">{(e.themes || []).join(", ")}</div>
@@ -82,8 +122,11 @@ export default function Library() {
               <span className="f-mono text-[11px] text-stone-500">{fmtDate(e.published_at || e.updated_at)}</span>
             </div>
           </Link>
+          </div>
         ))}
       </div>
+      <AddToSeriesDialog open={adding} episodeIds={[...sel]} series={series} onClose={() => setAdding(false)}
+        onDone={() => { setSel(new Set()); loadSeries(); }} />
     </div>
   );
 }

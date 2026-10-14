@@ -20,20 +20,25 @@ Requirements: Docker Engine + Docker Compose plugin (Linux, macOS or Windows wit
 git clone <your repo> bible-bytes-producer && cd bible-bytes-producer
 cp .env.example .env
 openssl rand -hex 32        # paste the result into JWT_SECRET in .env
-nano .env                   # set ADMIN_USERNAME / ADMIN_PASSWORD
+nano .env                   # set SETUP_TOKEN (any secret phrase)
 docker compose up -d --build
 ```
 Open `http://<server-ip>:8080` (or the `APP_PORT` you chose).
 
 > **Note on cookies:** with `COOKIE_SECURE=true` (the default and recommended for the tunnel) browsers only keep the login cookie over HTTPS or on `http://localhost`. For plain-http LAN testing from another machine, temporarily set `COOKIE_SECURE=false` and run `docker compose up -d`.
 
-## 2. First sign-in
-1. Sign in with `ADMIN_USERNAME` / `ADMIN_PASSWORD`.
-2. **Settings → AI provider & keys**: paste a Gemini key (https://aistudio.google.com/apikey) and/or an OpenAI key (https://platform.openai.com/api-keys), pick the default, click **Test connection**. Model names are editable (defaults `gemini-2.5-flash`, `gpt-5-mini`).
-3. **Settings → Reference documents**: upload the planning template `.docx` and your past episode `.docx` files. Use **Add to library** on each example to track it as a published episode (AI can suggest the title/scripture/themes).
-4. **Settings → Users**: add your team (Admin or Producer).
+## 2. First-run setup
+Open the app. Because no accounts exist yet, the **setup wizard** appears:
+- **Start fresh**: enter the `SETUP_TOKEN`, create your admin account, describe the podcast (name, tagline, hosts, about, audience; the AI reads this before every generation) and optionally paste Gemini/OpenAI keys.
+- **Restore a backup**: upload a `bible-bytes-backup-*.zip` (made from Dashboard → *Back up now* or Settings → Backup) to bring everything over (accounts, episodes, documents, plans, settings, artwork) and skip the other steps.
 
-The admin password in `.env` is only used to create the account the first time. To recover a lost admin password, set `ADMIN_FORCE_RESET=true`, run `docker compose up -d`, sign in, then set it back to `false`.
+Afterwards:
+1. **Settings → AI provider & keys**: add/test keys, choose models.
+2. **Settings → Reference documents**: upload the planning template and example `.docx` files.
+3. **Import**: paste your RSS feed URL to bring in the back catalog.
+4. **Settings → Users**: add your team.
+
+Lost the admin password? Set `ADMIN_USERNAME`, `ADMIN_PASSWORD` and `ADMIN_FORCE_RESET=true` in `.env`, run `docker compose up -d`, sign in, then clear those values.
 
 ## 3. Publish through Cloudflare Tunnel
 1. Cloudflare dashboard → **Zero Trust → Networks → Tunnels → Create a tunnel** (type *Cloudflared*). Copy the tunnel **token**.
@@ -57,6 +62,9 @@ docker compose down                     # stop (data is kept in the volume)
 ```
 
 ## Backups
+Easiest: **Dashboard → Back up now** (admins) downloads one `.zip` with the database and artwork. It contains API keys and password hashes, so keep it private. Restore it in Settings → Backup or in the first-run wizard on a new server.
+
+Command-line alternative:
 Generated episode artwork is stored as PNG files in the `media_data` volume (`/data/media` in the backend container); back it up alongside the database:
 ```bash
 docker run --rm -v bible-bytes-producer_media_data:/m -v $PWD:/b alpine tar czf /b/media-$(date +%F).tgz -C /m .

@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AiSettings } from "@/components/settings/AiSettings";
 import { DocumentsSettings } from "@/components/settings/DocumentsSettings";
 import { UsersSettings } from "@/components/settings/UsersSettings";
+import { BackupSettings } from "@/components/settings/BackupSettings";
 
 export default function Settings() {
   return (
@@ -15,10 +16,12 @@ export default function Settings() {
           <TabsTrigger value="ai" data-testid="settings-tab-ai">AI provider & keys</TabsTrigger>
           <TabsTrigger value="docs" data-testid="settings-tab-docs">Reference documents</TabsTrigger>
           <TabsTrigger value="users" data-testid="settings-tab-users">Users</TabsTrigger>
+          <TabsTrigger value="backup" data-testid="settings-tab-backup">Backup</TabsTrigger>
         </TabsList>
         <TabsContent value="ai" className="mt-6"><AiSettings /></TabsContent>
         <TabsContent value="docs" className="mt-6"><DocumentsSettings /></TabsContent>
         <TabsContent value="users" className="mt-6"><UsersSettings /></TabsContent>
+        <TabsContent value="backup" className="mt-6"><BackupSettings /></TabsContent>
       </Tabs>
     </div>
   );

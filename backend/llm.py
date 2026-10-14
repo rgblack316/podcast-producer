@@ -15,6 +15,10 @@ DEFAULT_SETTINGS = {
     "image_provider": "gemini",
     "gemini_image_model": "gemini-2.5-flash-image",
     "openai_image_model": "gpt-image-1.5",
+    "show_tagline": "",
+    "host_names": "",
+    "show_description": "",
+    "audience": "",
 }
 TIMEOUT = httpx.Timeout(600.0, connect=20.0)
 

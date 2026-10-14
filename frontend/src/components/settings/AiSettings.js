@@ -63,7 +63,8 @@ export function AiSettings() {
     setS(data);
     setForm({ show_name: data.show_name, default_provider: data.default_provider, gemini_model: data.gemini_model,
       openai_model: data.openai_model, extra_instructions: data.extra_instructions, gemini_api_key: "", openai_api_key: "",
-      image_provider: data.image_provider, gemini_image_model: data.gemini_image_model, openai_image_model: data.openai_image_model });
+      image_provider: data.image_provider, gemini_image_model: data.gemini_image_model, openai_image_model: data.openai_image_model,
+      show_tagline: data.show_tagline, host_names: data.host_names, show_description: data.show_description, audience: data.audience });
   };
   useEffect(() => { api.get("/settings").then((r) => apply(r.data)); }, []);
   if (!s) return <p className="text-stone-500 italic">Loading…</p>;
@@ -87,6 +88,19 @@ export function AiSettings() {
 
   return (
     <div className="space-y-6">
+      <div className="card-warm p-6 grid grid-cols-1 md:grid-cols-2 gap-6" data-testid="settings-podcast-info">
+        <h3 className="md:col-span-2 f-serif text-2xl">Podcast information</h3>
+        {[["show_tagline", "Tagline"], ["host_names", "Host name(s)"], ["audience", "Audience"]].map(([k, label]) => (
+          <div key={k} className="space-y-1.5">
+            <Label htmlFor={k}>{label}</Label>
+            <Input id={k} value={form[k] || ""} onChange={(e) => set(k)(e.target.value)} className="bg-[#FFFDF9]" data-testid={`settings-${k}-input`} />
+          </div>
+        ))}
+        <div className="md:col-span-2 space-y-1.5">
+          <Label htmlFor="show_description">About the show (the AI reads this before every generation)</Label>
+          <Textarea id="show_description" rows={3} value={form.show_description || ""} onChange={(e) => set("show_description")(e.target.value)} className="bg-[#FFFDF9]" data-testid="settings-show_description-input" />
+        </div>
+      </div>
       <div className="card-warm p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-1.5">
           <Label htmlFor="show-name">Show name</Label>

@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { api, fmtDate, STATUS_LABELS } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { StatusBadge } from "@/components/StatusBadge";
+import { UpcomingPanel } from "@/components/UpcomingPanel";
+import { BackupButton } from "@/components/settings/BackupSettings";
 
 function EpisodeRow({ e }) {
   return (
@@ -44,9 +46,12 @@ export default function Dashboard() {
           </h1>
           <p className="text-[#44403C] mt-2 max-w-xl">Plan the next episode, finish what's in progress, or look back at what's been covered.</p>
         </div>
-        <Button size="lg" className="rounded-full" onClick={() => navigate("/episodes/new")} data-testid="dashboard-new-episode-btn">
-          <Plus className="h-4 w-4 mr-1" /> Start a new episode
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {user?.role === "admin" && <BackupButton />}
+          <Button size="lg" className="rounded-full" onClick={() => navigate("/episodes/new")} data-testid="dashboard-new-episode-btn">
+            <Plus className="h-4 w-4 mr-1" /> Start a new episode
+          </Button>
+        </div>
       </section>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4 fade-up" style={{ animationDelay: "80ms" }}>
@@ -59,7 +64,9 @@ export default function Dashboard() {
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 fade-up" style={{ animationDelay: "160ms" }}>
-        <div className="lg:col-span-8 card-warm p-6 space-y-6">
+        <div className="lg:col-span-8 space-y-6">
+        <UpcomingPanel />
+        <div className="card-warm p-6 space-y-6">
           <div>
             <div className="flex items-center justify-between">
               <h2 className="f-serif text-2xl text-[#1C1917]">In progress</h2>
@@ -82,6 +89,7 @@ export default function Dashboard() {
                 .map((e) => <EpisodeRow key={e.id} e={e} />) : <p className="text-stone-500 italic py-4">No episodes yet. Start your first one.</p>}
             </div>
           </div>
+        </div>
         </div>
         <aside className="lg:col-span-4 space-y-6">
           <TagCloud title="Themes covered" items={meta?.themes} param="theme" testId="dashboard-themes" />
