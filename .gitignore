@@ -90,3 +90,9 @@ backend/media/
 /.env
 /backups/
 /backend/media/
+.env
+.env.*
+*.env
+credentials.json
+*.key
+.credentials
