@@ -22,7 +22,8 @@ Host/producers (create episodes), Admin (users, AI keys, reference docs)
 - Branding: podcast cover art as favicon, header logo, login art
 - Docker + README with Cloudflare Tunnel steps
 - Tested: 32/32 backend, frontend smoke flows pass. Real AI generation NOT tested (no keys).
+- Iteration 2: Show notes/description/social posts (from finished script, edit/revise), Coverage Map page (OT/NT book heat grid, themes, timeline, AI gap-filling suggestions → prefilled intake), Artwork studio (AI art-director brainstorm chat → concepts → editable prompt → 1:1 image via Gemini Nano Banana or OpenAI GPT Image, gallery select/download/delete; files in MEDIA_DIR volume). 47/47 backend tests pass.
 
 ## Backlog
 - P1: MFA (TOTP), bulk back-catalog import, coverage views, version diff
-- P2: show notes/social posts, calendar/series, backup/restore UI, audit log
+- P2: calendar/series, backup/restore UI, audit log

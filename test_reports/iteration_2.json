@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 2 testing of Bible Bytes Producer: Show notes (assets), Coverage map, Artwork studio, Settings image provider. 15 new pytest cases in /app/backend/tests/test_iteration2.py all passed; the pre-existing /app/backend/tests/backend_test.py (32 cases) also still passes — total 47/47 backend tests green. Frontend Playwright drive-through covered Settings AI image provider radios + model inputs save and persist across reload; Coverage page renders 39 OT + 27 NT books, popovers, themes/timeline, seeded suggestion s1 appears and 'Start episode' prefills /episodes/new (title, scripture, topic); POST /api/coverage/suggest without key surfaces toast; Assets tab shows assets-locked for draft and assets-generate-btn for script_complete, generate-without-key surfaces the toast 'No API key set for gemini. An admin can add one in Settings.'; Artwork tab renders the seeded authenticated image, clicking artwork-concept-<id> loads its prompt into artwork-prompt-input, generate-without-key surfaces toast error; unauthenticated access to the artwork PNG is blocked by the auth dependency. Fake keys cleared, UI_ episodes + media + coverage_suggestions doc deleted post-run. Admin NOT locked out.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/episodes/{id}/artwork/{img_id}.png", "issue": "Unauthenticated request returns 403, spec says 401. Access is still correctly blocked (FastAPI returns 403 when no cookie is present on routes using Depends(get_current_user) raising HTTPException(401)); worth confirming the dependency raises 401 explicitly if the spec requires it."},
+      {"endpoint": "POST /api/episodes/{id}/assets/generate (and artwork/generate, outline/generate)", "issue": "Carried over from iteration 1 — with no key configured the endpoint returns 200, starts a background task, which then sets last_error / art_error. Spec expects synchronous 400 'No API key set'. UI surfaces the toast via the subsequent GET so UX works, but server-side semantics still disagree with spec."},
+      {"endpoint": "PUT /api/settings", "issue": "Previously-noted bug is now FIXED — update_settings explicitly drops empty gemini_api_key/openai_api_key strings so blank input keeps the saved key (confirmed by TestSettingsImage.test_blank_key_preserved)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Artwork generate without key", "issue": "Toast 'No API key set for gemini...' appears immediately, but inline [data-testid=artwork-error] block only renders after the background task updates art_error (requires a page refetch). UI already triggers getEpisode after the POST so it typically appears, but on slower polls the inline block can lag by 1-2s. Non-blocking.", "affected_selectors": ["artwork-error"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration2.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/iteration2.xml"
+  ],
+  "action_items": [
+    "Consider returning synchronous 400 'No API key set' from POST /episodes/{id}/outline|script|assets/generate and /artwork/generate (matches spec and simpler for UI).",
+    "Confirm whether unauthenticated artwork PNG should be 401 vs 403 — update auth dep (or doc) to match."
+  ],
+  "critical_code_review_comments": [
+    "extras.py artwork_file endpoint validates UUID format for both ep_id and img_id before touching disk — good hardening against path traversal.",
+    "extras.py _run_image saves image to MEDIA_DIR/{ep_id}/{img_id}.png and updates mongo with messages/concepts preserved — correct and idempotent.",
+    "update_settings now drops empty api_key strings (admin.py:61-63). Fix from iteration 1 verified.",
+    "/api/coverage returns 66 books in canonical order with OT/NT testament tagging — matches spec.",
+    "Suggest endpoint persists to coverage_suggestions id='latest' with upsert — single-document pattern is simple but means only the latest batch is ever available (no history). Likely intentional.",
+    "Library list endpoint (episodes list) excludes assets/full artwork messages — verified via TestLibraryLightweight. Good for payload size."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration2.py (new, 15 pytest cases)"
+  ],
+  "success_rate": {"backend": "100% (47/47 across both test files)", "frontend": "100% of critical iteration-2 flows (settings image provider save+persist, coverage grid+suggestion prefill, assets locked/generate, artwork concept-pick+image render+unauth-block)"},
+  "test_credentials": "admin / BibleBytes!2026",
+  "seed_data_creation": "During run created UI_IT2_Show (script_complete + fake artwork image + concept) and UI_IT2_Draft, plus coverage_suggestions id='latest' with one item. All cleaned up post-run (verified 0 UI_ episodes, 0 coverage_suggestions, api keys cleared).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run both pytest files: `pytest /app/backend/tests/test_iteration2.py /app/backend/tests/backend_test.py -o addopts=''` (pytest.ini forces xdist loadscope which can hide errors — override addopts in CI). Key testids used: settings-image-provider-select, image-provider-radio-gemini/openai, settings-gemini-image-model-input, settings-openai-image-model-input, coverage-page, coverage-ot, coverage-nt, coverage-book-<Name>, coverage-themes, coverage-timeline, coverage-suggestions, coverage-suggest-btn, suggestion-<id>, suggestion-start-<id>, tab-assets, tab-artwork, assets-locked, assets-generate-btn, assets-error, assets-input-<field>, assets-save-btn, artwork-studio, artwork-chat, artwork-brainstorm-input, artwork-brainstorm-btn, artwork-concept-<id>, artwork-prompt-input, artwork-generate-btn, artwork-image-<id>, artwork-select-<id>, artwork-download-<id>, artwork-delete-<id>, artwork-error. To seed artwork for UI testing: write PNG to /app/backend/media/{ep_id}/{img_id}.png then $set artwork.images/messages/concepts/selected_image_id in mongo (DB_NAME=test_database)."
+}
