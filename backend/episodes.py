@@ -203,6 +203,7 @@ async def delete_episode(ep_id: str, _: dict = Depends(require_admin)):
     res = await db.episodes.delete_one({"id": ep_id})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Episode not found")
+    await db.plan_items.delete_many({"episode_id": ep_id})
     return {"ok": True}
 
 

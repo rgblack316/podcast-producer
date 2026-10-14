@@ -22,6 +22,7 @@ Host/producers (create episodes), Admin (users, AI keys, reference docs)
 - Branding: podcast cover art as favicon, header logo, login art
 - Docker + README with Cloudflare Tunnel steps
 - Tested: 32/32 backend, frontend smoke flows pass. Real AI generation NOT tested (no keys).
+- Iteration 9: Episode target publish date (intake field, shown on episode page, two-way sync with Planner plan item, passed to AI); deleting an episode removes its plan items.
 - Iteration 8: Library pagination (10/25/50/100/All, persisted) and sorting by episode #, scripture (canonical book/chapter/verse via scripture_key), publication date.
 - Iteration 7: Series pages (/series grid, /series/:id hero + episodes + scripture coverage + cover art: upload, copy episode art, AI studio). install.sh (curl | sudo bash → /opt/podcast-producer, Docker, .env secrets, setup token) and upgrade.sh (pre-upgrade backup, git reset to origin, rebuild) from github.com/rgblack316/podcast-producer.
 - Iteration 6: RSS artwork (itunes:image) + show notes import (auto on library import, bulk "Pull artwork & show notes", per-episode buttons; never overwrites edited notes, no duplicate art), Series panel on episode page. Fixed earlier bug where test runs overwrote real API keys (tests/conftest.py snapshot/restore) + RSS analysis aborts on auth errors.
