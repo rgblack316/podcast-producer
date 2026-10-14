@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { addMonths, endOfMonth, endOfWeek, format, startOfMonth, startOfWeek } from "date-fns";
 import { ChevronLeft, ChevronRight, Lightbulb, Plus, Settings2 } from "lucide-react";
 import { toast } from "sonner";
@@ -90,7 +91,7 @@ export default function Planner() {
             {series.length ? series.map((s) => (
               <div key={s.id} className="flex items-center gap-2 text-sm" data-testid={`series-row-${s.id}`}>
                 <span className="h-3 w-3 rounded-full shrink-0" style={{ background: s.color }} />
-                <span className="flex-1 truncate" title={s.description}>{s.name}</span>
+                <Link to={`/series/${s.id}`} className="flex-1 truncate hover:text-[#B45309]" title={s.description} data-testid={`series-link-${s.id}`}>{s.name}</Link>
                 <span className="f-mono text-xs text-stone-500">{s.count}</span>
                 <button onClick={() => setSeriesEdit({ open: true, series: s })} className="text-stone-400 hover:text-[#1C1917]" data-testid={`series-edit-${s.id}`}><Settings2 className="h-3.5 w-3.5" /></button>
               </div>

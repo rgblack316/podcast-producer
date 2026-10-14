@@ -7,9 +7,9 @@ import { API, api, errMsg } from "@/lib/api";
 import { Generating } from "@/components/DocStage";
 import { FeedSyncButton } from "@/components/FeedSyncButton";
 
-const imgUrl = (ep, img) => `${API}/episodes/${ep.id}/artwork/${img.id}.png`;
+export const imgUrl = (base, img) => `${API}${base}/${img.id}.png`;
 
-function Chat({ episode, art, onChange, providers }) {
+function Chat({ base, art, onChange, providers }) {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const end = useRef();
@@ -18,7 +18,7 @@ function Chat({ episode, art, onChange, providers }) {
   const send = async () => {
     setBusy(true);
     try {
-      const { data } = await api.post(`/episodes/${episode.id}/artwork/brainstorm`, { notes: note, provider: providers.default_provider });
+      const { data } = await api.post(`${base}/brainstorm`, { notes: note, provider: providers.default_provider });
       onChange(data);
       setNote("");
     } catch (e) { toast.error(errMsg(e)); } finally { setBusy(false); }
@@ -69,7 +69,7 @@ function Concepts({ art, picked, onPick }) {
   );
 }
 
-function Gallery({ episode, art, onChange }) {
+function Gallery({ base, name, art, onChange, selectLabel }) {
   const act = async (fn, msg) => { try { onChange((await fn()).data); toast.success(msg); } catch (e) { toast.error(errMsg(e)); } };
   if (!art.images.length) return null;
   return (
@@ -80,18 +80,18 @@ function Gallery({ episode, art, onChange }) {
           const selected = art.selected_image_id === img.id;
           return (
             <div key={img.id} className={`group relative rounded-lg overflow-hidden border-2 ${selected ? "border-[#B45309]" : "border-transparent"}`} data-testid={`artwork-image-${img.id}`}>
-              <img src={imgUrl(episode, img)} alt={img.prompt} title={img.prompt} className="w-full aspect-square object-cover bg-[#F4EFE6]" />
-              {selected && <span className="absolute top-2 left-2 bg-[#B45309] text-white text-[11px] font-semibold px-2 py-0.5 rounded-full">Episode art</span>}
+              <img src={imgUrl(base, img)} alt={img.prompt} title={img.prompt} className="w-full aspect-square object-cover bg-[#F4EFE6]" />
+              {selected && <span className="absolute top-2 left-2 bg-[#B45309] text-white text-[11px] font-semibold px-2 py-0.5 rounded-full">{selectLabel === "episode art" ? "Episode art" : "Cover"}</span>}
               <div className="absolute inset-x-0 bottom-0 p-2 flex gap-1 justify-end bg-gradient-to-t from-black/60 to-transparent opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                 {!selected && (
-                  <Button size="icon" variant="secondary" className="h-8 w-8" title="Use as episode art" data-testid={`artwork-select-${img.id}`}
-                    onClick={() => act(() => api.post(`/episodes/${episode.id}/artwork/${img.id}/select`), "Set as episode art")}><Star className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="secondary" className="h-8 w-8" title={`Use as ${selectLabel}`} data-testid={`artwork-select-${img.id}`}
+                    onClick={() => act(() => api.post(`${base}/${img.id}/select`), `Set as ${selectLabel}`)}><Star className="h-4 w-4" /></Button>
                 )}
-                <a href={imgUrl(episode, img)} download={`${episode.title}-art.png`} data-testid={`artwork-download-${img.id}`}>
+                <a href={imgUrl(base, img)} download={`${name}-art.png`} data-testid={`artwork-download-${img.id}`}>
                   <Button size="icon" variant="secondary" className="h-8 w-8" title="Download"><Download className="h-4 w-4" /></Button>
                 </a>
                 <Button size="icon" variant="secondary" className="h-8 w-8 text-red-700" title="Delete" data-testid={`artwork-delete-${img.id}`}
-                  onClick={() => window.confirm("Delete this image?") && act(() => api.delete(`/episodes/${episode.id}/artwork/${img.id}`), "Image deleted")}><Trash2 className="h-4 w-4" /></Button>
+                  onClick={() => window.confirm("Delete this image?") && act(() => api.delete(`${base}/${img.id}`), "Image deleted")}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </div>
           );
@@ -101,7 +101,8 @@ function Gallery({ episode, art, onChange }) {
   );
 }
 
-export function ArtworkStudio({ episode, providers, onChange }) {
+export function ArtworkStudio({ episode, providers, onChange, basePath, selectLabel = "episode art", extra }) {
+  const base = basePath || `/episodes/${episode.id}/artwork`;
   const art = { messages: [], concepts: [], images: [], selected_image_id: null, ...(episode.artwork || {}) };
   const [picked, setPicked] = useState(null);
   const [prompt, setPrompt] = useState("");
@@ -112,15 +113,15 @@ export function ArtworkStudio({ episode, providers, onChange }) {
   const generate = async () => {
     setBusy(true);
     try {
-      const { data } = await api.post(`/episodes/${episode.id}/artwork/generate`, { prompt, provider: imageProvider, concept_id: picked });
+      const { data } = await api.post(`${base}/generate`, { prompt, provider: imageProvider, concept_id: picked });
       onChange(data);
     } catch (e) { toast.error(errMsg(e)); } finally { setBusy(false); }
   };
 
   return (
     <div className="space-y-5" data-testid="artwork-studio">
-      <div className="flex justify-end"><FeedSyncButton episode={episode} what="artwork" onChange={onChange} /></div>
-      <Chat episode={episode} art={art} onChange={onChange} providers={providers} />
+      <div className="flex justify-end">{extra !== undefined ? extra : <FeedSyncButton episode={episode} what="artwork" onChange={onChange} />}</div>
+      <Chat base={base} art={art} onChange={onChange} providers={providers} />
       <Concepts art={art} picked={picked} onPick={pick} />
       <div className="rounded-lg bg-[#F4EFE6]/70 border border-[#E2DACD] p-4 space-y-3">
         <p className="eyebrow">Final image prompt · square 1:1</p>
@@ -139,7 +140,7 @@ export function ArtworkStudio({ episode, providers, onChange }) {
         <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800 break-words" data-testid="artwork-error">Last image failed: {episode.art_error}</div>
       )}
       {episode.art_generating && <Generating stage="artwork" />}
-      <Gallery episode={episode} art={art} onChange={onChange} />
+      <Gallery base={base} name={episode.title || episode.name} art={art} onChange={onChange} selectLabel={selectLabel} />
     </div>
   );
 }

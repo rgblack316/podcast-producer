@@ -1,6 +1,6 @@
 FROM node:20-alpine AS build
 WORKDIR /app
-COPY package.json ./
+COPY package.json yarn.lock ./
 # Strip preview-only dev tooling so the build has no external platform dependencies
 RUN node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));for(const k of Object.keys(p.devDependencies||{}))if(k.startsWith('@emergentbase'))delete p.devDependencies[k];delete p.packageManager;fs.writeFileSync('package.json',JSON.stringify(p,null,2))" \
     && yarn install --network-timeout 600000

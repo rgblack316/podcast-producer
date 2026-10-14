@@ -15,6 +15,8 @@ import Settings from "@/pages/Settings";
 import Account from "@/pages/Account";
 import Coverage from "@/pages/Coverage";
 import Planner from "@/pages/Planner";
+import SeriesList from "@/pages/SeriesList";
+import SeriesPage from "@/pages/SeriesPage";
 import RssImport from "@/pages/RssImport";
 
 function Protected({ children, admin }) {
@@ -61,6 +63,8 @@ function App() {
             <Route path="/episodes/:id" element={<Protected><Episode /></Protected>} />
             <Route path="/coverage" element={<Protected><Coverage /></Protected>} />
             <Route path="/planner" element={<Protected><Planner /></Protected>} />
+            <Route path="/series" element={<Protected><SeriesList /></Protected>} />
+            <Route path="/series/:id" element={<Protected><SeriesPage /></Protected>} />
             <Route path="/import" element={<Protected admin><RssImport /></Protected>} />
             <Route path="/settings" element={<Protected admin><Settings /></Protected>} />
             <Route path="/account" element={<Protected><Account /></Protected>} />

@@ -85,3 +85,8 @@ android-sdk/
 **/.emergent/recordings/
 frontend/node_modules/.cache/default-development/0.pack
 backend/media/
+
+# Server-local data (never committed)
+/.env
+/backups/
+/backend/media/

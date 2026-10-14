@@ -13,7 +13,19 @@ Runs entirely on your own server with Docker. It talks directly to Google Gemini
 | `frontend` | React app served by nginx, which also proxies `/api` to the backend |
 | `cloudflared` | Optional Cloudflare Tunnel connector (enabled with `--profile tunnel`) |
 
-## 1. Install on the local server
+## Quick install (Ubuntu/Debian)
+```bash
+curl -fsSL https://raw.githubusercontent.com/rgblack316/podcast-producer/main/install.sh | sudo bash
+```
+Installs Docker if needed, downloads the app to `/opt/podcast-producer`, writes `.env` with fresh secrets, asks for the port and an optional Cloudflare Tunnel token, starts everything and prints the **setup token** for the first-run wizard.
+
+### Upgrade
+```bash
+sudo podcast-producer-upgrade        # same as: sudo /opt/podcast-producer/upgrade.sh
+```
+Takes a pre-upgrade backup into `backups/` (keeps the last 10), pulls the latest code from GitHub (local edits to tracked files are discarded; `.env`, `backups/` and all data in Docker volumes are kept), rebuilds and restarts.
+
+## 1. Manual install on the local server
 Requirements: Docker Engine + Docker Compose plugin (Linux, macOS or Windows with WSL2).
 
 ```bash

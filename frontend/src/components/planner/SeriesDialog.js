@@ -24,7 +24,7 @@ export function SeriesDialog({ series, open, onClose, onSaved }) {
     if (!window.confirm(`Delete series "${series.name}"? Planned episodes stay on the calendar.`)) return;
     await api.delete(`/series/${series.id}`);
     toast.success("Series deleted");
-    onSaved();
+    onSaved("deleted");
     onClose();
   };
   return (

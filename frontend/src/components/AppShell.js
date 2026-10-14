@@ -29,6 +29,7 @@ export default function AppShell({ children }) {
             <NavLink to="/episodes" end className={navCls} data-testid="nav-library">Library</NavLink>
             <NavLink to="/coverage" className={navCls} data-testid="nav-coverage">Coverage</NavLink>
             <NavLink to="/planner" className={navCls} data-testid="nav-planner">Planner</NavLink>
+            <NavLink to="/series" className={navCls} data-testid="nav-series">Series</NavLink>
             {user?.role === "admin" && (
               <NavLink to="/import" className={navCls} data-testid="nav-import">Import</NavLink>
             )}
@@ -55,6 +56,7 @@ export default function AppShell({ children }) {
                 <DropdownMenuItem className="md:hidden" onClick={() => navigate("/episodes")}>Library</DropdownMenuItem>
                 <DropdownMenuItem className="md:hidden" onClick={() => navigate("/coverage")}>Coverage</DropdownMenuItem>
                 <DropdownMenuItem className="md:hidden" onClick={() => navigate("/planner")}>Planner</DropdownMenuItem>
+                <DropdownMenuItem className="md:hidden" onClick={() => navigate("/series")}>Series</DropdownMenuItem>
                 {user?.role === "admin" && (
                   <DropdownMenuItem className="md:hidden" onClick={() => navigate("/import")}>Import</DropdownMenuItem>
                 )}

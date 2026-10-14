@@ -16,6 +16,7 @@ from extras import router as extras_router  # noqa: E402
 from planner import router as planner_router  # noqa: E402
 from rss_import import router as rss_router  # noqa: E402
 from setup import router as setup_router  # noqa: E402
+from series_art import router as series_art_router  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
@@ -28,7 +29,7 @@ async def health():
     return {"ok": True}
 
 
-for r in (auth_router, users_router, setup_router, extras_router, planner_router, rss_router, episodes_router, settings_router, docs_router):
+for r in (auth_router, users_router, setup_router, series_art_router, extras_router, planner_router, rss_router, episodes_router, settings_router, docs_router):
     api.include_router(r)
 app.include_router(api)
 
