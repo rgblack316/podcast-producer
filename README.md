@@ -207,6 +207,7 @@ If you use the tunnel, add `--profile tunnel` to `up`/`down`, or simply use the 
 | Login works on `localhost` but not over plain `http://<ip>` | Browsers reject secure cookies over http. Use the tunnel (HTTPS), or set `COOKIE_SECURE=false` and run the upgrade script. |
 | "API key not valid" during generation or RSS analysis | Re-enter the key in **Settings → AI** and click **Test connection**. |
 | Lost the admin password | In `.env`, set `ADMIN_USERNAME=<admin>`, `ADMIN_PASSWORD=<new>` and `ADMIN_FORCE_RESET=true`. Run `sudo podcast-producer-upgrade`, sign in, then clear those three values and run the upgrade again. |
+| Installer was interrupted (closed terminal, build error) | Run the same `curl … | sudo bash` command again. If no `.env` exists yet, it updates the download and continues the install; once `.env` exists, use `sudo /opt/podcast-producer/upgrade.sh` instead. |
 | Setup wizard says "Invalid setup token" | Use the `SETUP_TOKEN` value from `/opt/podcast-producer/.env`. |
 | Large backup restore fails | Uploads are limited to 512 MB (nginx `client_max_body_size`). Restore larger backups from the command line. |
 | Tunnel shows an error page | In Cloudflare, check that the public hostname points to `http://frontend:80`, and run `docker compose logs cloudflared`. |
