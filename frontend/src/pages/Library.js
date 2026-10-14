@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Layers, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Layers, Search } from "lucide-react";
+import { Pagination } from "@/components/Pagination";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -35,6 +36,15 @@ export default function Library() {
   const [membership, setMembership] = useState({});
   const [sel, setSel] = useState(new Set());
   const [adding, setAdding] = useState(false);
+  const [sort, setSort] = useState(() => JSON.parse(localStorage.getItem("library-sort") || '{"key":"published","dir":"desc"}'));
+  const [pageSize, setPageSize] = useState(() => localStorage.getItem("library-page-size") || "25");
+  const [page, setPage] = useState(1);
+  const changeSort = (key) => {
+    const next = sort.key === key ? { key, dir: sort.dir === "asc" ? "desc" : "asc" } : { key, dir: key === "published" ? "desc" : "asc" };
+    setSort(next);
+    localStorage.setItem("library-sort", JSON.stringify(next));
+  };
+  const changePageSize = (v) => { setPageSize(v); localStorage.setItem("library-page-size", v); setPage(1); };
   const seriesById = Object.fromEntries(series.map((s) => [s.id, s]));
   const loadSeries = () => {
     api.get("/series").then((r) => setSeries(r.data));
@@ -63,6 +73,37 @@ export default function Library() {
     }, 250);
     return () => clearTimeout(t);
   }, [q, filters.status, filters.theme, filters.book]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const visible = useMemo(() => {
+    const list = (episodes || []).filter((e) => !seriesFilter || membership[e.id] === seriesFilter);
+    const val = {
+      number: (e) => (/^\d+/.test(e.episode_number || "") ? parseInt(e.episode_number, 10) : null),
+      scripture: (e) => (e.scripture_key === 999999999 ? null : e.scripture_key),
+      published: (e) => e.published_at || e.created_at || null,
+    }[sort.key];
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return [...list].sort((a, b) => {
+      const x = val(a), y = val(b);
+      if (x === y) return (a.title || "").localeCompare(b.title || "");
+      if (x === null) return 1;
+      if (y === null) return -1;
+      return (x < y ? -1 : 1) * dir;
+    });
+  }, [episodes, seriesFilter, membership, sort]);
+  useEffect(() => { setPage(1); }, [q, filters.status, filters.theme, filters.book, seriesFilter, sort]); // eslint-disable-line react-hooks/exhaustive-deps
+  const size = pageSize === "all" ? visible.length || 1 : Number(pageSize);
+  const pages = Math.max(1, Math.ceil(visible.length / size));
+  const current = Math.min(page, pages);
+  const pageRows = visible.slice((current - 1) * size, current * size);
+  const SortBtn = ({ k, label, className = "" }) => {
+    const Icon = sort.key !== k ? ArrowUpDown : sort.dir === "asc" ? ArrowUp : ArrowDown;
+    return (
+      <button onClick={() => changeSort(k)} data-testid={`library-sort-${k}`}
+        className={`inline-flex items-center gap-1 uppercase tracking-[0.16em] hover:text-[#1C1917] transition-colors ${sort.key === k ? "text-[#92400E]" : ""} ${className}`}>
+        {label} <Icon className="h-3 w-3" />
+      </button>
+    );
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-8 py-10 space-y-8" data-testid="episode-library">
@@ -95,12 +136,16 @@ export default function Library() {
       )}
       <div className="card-warm overflow-hidden fade-up">
         <div className="hidden md:grid grid-cols-12 gap-4 pl-[3.75rem] pr-6 py-3 border-b border-[#E7E0D6] bg-[#F4EFE6]/60 eyebrow !text-stone-500">
-          <div className="col-span-1">#</div><div className="col-span-4">Episode</div><div className="col-span-3">Scripture</div>
-          <div className="col-span-2">Themes</div><div className="col-span-2 text-right">Status</div>
+          <div className="col-span-1"><SortBtn k="number" label="#" /></div><div className="col-span-4">Episode</div>
+          <div className="col-span-3"><SortBtn k="scripture" label="Scripture" /></div>
+          <div className="col-span-2">Themes</div><div className="col-span-2 text-right"><SortBtn k="published" label="Published" /></div>
         </div>
-        {episodes === null ? <p className="p-6 text-stone-500 italic">Loading…</p> : episodes.length === 0 ? (
+        <div className="md:hidden flex items-center gap-3 px-4 py-2 border-b border-[#E7E0D6] bg-[#F4EFE6]/60 eyebrow !text-stone-500" data-testid="library-sort-mobile">
+          Sort: <SortBtn k="number" label="#" /><SortBtn k="scripture" label="Scripture" /><SortBtn k="published" label="Date" />
+        </div>
+        {episodes === null ? <p className="p-6 text-stone-500 italic">Loading…</p> : visible.length === 0 ? (
           <p className="p-6 text-stone-500 italic" data-testid="library-empty">No episodes match.</p>
-        ) : episodes.filter((e) => !seriesFilter || membership[e.id] === seriesFilter).map((e) => (
+        ) : pageRows.map((e) => (
           <div key={e.id} className="flex items-center border-b border-[#EFE8DC] last:border-0 hover:bg-[#F4EFE6]/70 transition-colors">
           <div className="pl-4"><Checkbox checked={sel.has(e.id)} onCheckedChange={(v) => toggle(e.id, v)} data-testid={`library-check-${e.id}`} /></div>
           <Link to={`/episodes/${e.id}`} data-testid={`episode-row-item-${e.id}`}
@@ -124,6 +169,9 @@ export default function Library() {
           </Link>
           </div>
         ))}
+        {episodes !== null && visible.length > 0 && (
+          <Pagination total={visible.length} page={current} pageSize={pageSize} onPage={(p) => { setPage(p); window.scrollTo({ top: 0, behavior: "smooth" }); }} onPageSize={changePageSize} />
+        )}
       </div>
       <AddToSeriesDialog open={adding} episodeIds={[...sel]} series={series} onClose={() => setAdding(false)}
         onDone={() => { setSel(new Set()); loadSeries(); }} />

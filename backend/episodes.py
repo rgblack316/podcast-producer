@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 import llm
 import prompts
 from auth import get_current_user, require_admin
-from bible import books_in, chapter_keys
+from bible import BOOKS, books_in, chapter_keys, parse_refs
 from core import db, now_iso, new_id, NO_ID
 from docx_utils import markdown_to_docx
 
@@ -50,6 +50,19 @@ class StatusIn(BaseModel):
 
 class RestoreIn(BaseModel):
     version: int
+
+
+BOOK_INDEX = {b: i for i, (b, _) in enumerate(BOOKS)}
+
+
+def scripture_key(text: str) -> int:
+    """Canonical sort key: book order, then chapter; unparseable references sort last."""
+    refs = parse_refs(text)
+    if not refs:
+        return 999_999_999
+    book, ch = refs[0]
+    verse = re.search(r"\d+\s*:\s*(\d+)", text)
+    return BOOK_INDEX[book] * 1_000_000 + (ch or 0) * 1000 + (int(verse.group(1)) if verse else 0)
 
 
 def _clean_list(items):
@@ -95,7 +108,8 @@ async def list_episodes(q: str = "", status: str = "", theme: str = "", book: st
         query["themes_lower"] = theme.lower()
     if book:
         query["books"] = book
-    return await db.episodes.find(query, LIST_FIELDS).sort("created_at", -1).to_list(1000)
+    eps = await db.episodes.find(query, LIST_FIELDS).sort("created_at", -1).to_list(10000)
+    return [{**e, "scripture_key": scripture_key(e.get("primary_scripture", ""))} for e in eps]
 
 
 @router.get("/meta")
