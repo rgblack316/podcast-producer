@@ -111,8 +111,6 @@ async def fetch_feed(body: FetchIn, admin: dict = Depends(require_admin)):
     url = (body.feed_url or s.get("rss_feed_url") or "").strip()
     if not re.match(r"^https?://", url):
         raise HTTPException(status_code=400, detail="Enter a valid RSS feed URL (http/https)")
-    if body.feed_url:
-        await db.settings.update_one({"id": "app"}, {"$set": {"rss_feed_url": url}}, upsert=True)
     try:
         async with httpx.AsyncClient(timeout=60, headers=UA) as c:
             r = await c.get(url, follow_redirects=True)
@@ -120,6 +118,7 @@ async def fetch_feed(body: FetchIn, admin: dict = Depends(require_admin)):
         items = parse_feed(r.content)
     except (httpx.HTTPError, ET.ParseError) as e:
         raise HTTPException(status_code=400, detail=f"Could not read the feed: {str(e)[:300]}")
+    await db.settings.update_one({"id": "app"}, {"$set": {"rss_feed_url": url}}, upsert=True)
     imported_guids = set(await db.episodes.distinct("rss_guid"))
     await db.rss_items.delete_many({"feed_url": {"$ne": url}, "status": {"$ne": "imported"}})
     added = 0

@@ -22,6 +22,7 @@ Host/producers (create episodes), Admin (users, AI keys, reference docs)
 - Branding: podcast cover art as favicon, header logo, login art
 - Docker + README with Cloudflare Tunnel steps
 - Tested: 32/32 backend, frontend smoke flows pass. Real AI generation NOT tested (no keys).
+- Iteration 3: RSS back-catalog import (/import, admin): feed URL setting, parse items + podcast:transcript (VTT/SRT/JSON/text/HTML) else description, background AI metadata analysis (3 concurrent) → review list/edit dialog → bulk "Add to library" as Published imported episodes. Series Planner (/planner): month calendar, colored series, plan items (dated/unscheduled, notes, linked episode), drag & drop from coverage suggestions/in-progress episodes, Start episode links plan item. Coverage suggestions "Add to plan". 67/67 backend tests pass.
 - Iteration 2: Show notes/description/social posts (from finished script, edit/revise), Coverage Map page (OT/NT book heat grid, themes, timeline, AI gap-filling suggestions → prefilled intake), Artwork studio (AI art-director brainstorm chat → concepts → editable prompt → 1:1 image via Gemini Nano Banana or OpenAI GPT Image, gallery select/download/delete; files in MEDIA_DIR volume). 47/47 backend tests pass.
 
 ## Backlog
