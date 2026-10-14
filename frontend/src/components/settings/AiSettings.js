@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { api, errMsg } from "@/lib/api";
 
-function ProviderCard({ id, name, s, keyVal, setKey, model, setModel, hint }) {
+function ProviderCard({ id, name, s, keyVal, setKey, model, setModel, hint, imageModel, setImageModel }) {
   const [testing, setTesting] = useState(false);
   const test = async () => {
     setTesting(true);
@@ -42,6 +42,11 @@ function ProviderCard({ id, name, s, keyVal, setKey, model, setModel, hint }) {
         <Input id={`${id}-model`} value={model} onChange={(e) => setModel(e.target.value)} className="bg-[#FFFDF9] f-mono"
           data-testid={`settings-${id}-model-input`} />
       </div>
+      <div className="space-y-1.5">
+        <Label htmlFor={`${id}-image-model`}>Image model (artwork)</Label>
+        <Input id={`${id}-image-model`} value={imageModel} onChange={(e) => setImageModel(e.target.value)} className="bg-[#FFFDF9] f-mono"
+          data-testid={`settings-${id}-image-model-input`} />
+      </div>
       <Button variant="outline" size="sm" className="bg-[#FFFDF9]" onClick={test} disabled={testing || !s[`${id}_configured`]} data-testid={`settings-${id}-test-btn`}>
         {testing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <PlugZap className="h-4 w-4 mr-1.5" />} Test connection
       </Button>
@@ -57,7 +62,8 @@ export function AiSettings() {
   const apply = (data) => {
     setS(data);
     setForm({ show_name: data.show_name, default_provider: data.default_provider, gemini_model: data.gemini_model,
-      openai_model: data.openai_model, extra_instructions: data.extra_instructions, gemini_api_key: "", openai_api_key: "" });
+      openai_model: data.openai_model, extra_instructions: data.extra_instructions, gemini_api_key: "", openai_api_key: "",
+      image_provider: data.image_provider, gemini_image_model: data.gemini_image_model, openai_image_model: data.openai_image_model });
   };
   useEffect(() => { api.get("/settings").then((r) => apply(r.data)); }, []);
   if (!s) return <p className="text-stone-500 italic">Loading…</p>;
@@ -93,6 +99,13 @@ export function AiSettings() {
             <label className="flex items-center gap-2 text-sm"><RadioGroupItem value="openai" data-testid="provider-radio-openai" /> OpenAI ChatGPT</label>
           </RadioGroup>
         </div>
+        <div className="space-y-2">
+          <Label>Artwork image provider</Label>
+          <RadioGroup value={form.image_provider} onValueChange={set("image_provider")} className="flex gap-6" data-testid="settings-image-provider-select">
+            <label className="flex items-center gap-2 text-sm"><RadioGroupItem value="gemini" data-testid="image-provider-radio-gemini" /> Gemini (Nano Banana)</label>
+            <label className="flex items-center gap-2 text-sm"><RadioGroupItem value="openai" data-testid="image-provider-radio-openai" /> OpenAI GPT Image</label>
+          </RadioGroup>
+        </div>
         <div className="md:col-span-2 space-y-1.5">
           <Label htmlFor="extra">Standing instructions for every generation</Label>
           <Textarea id="extra" rows={3} value={form.extra_instructions} onChange={(e) => set("extra_instructions")(e.target.value)}
@@ -101,9 +114,11 @@ export function AiSettings() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ProviderCard id="gemini" name="Google Gemini" s={s} keyVal={form.gemini_api_key} setKey={set("gemini_api_key")}
-          model={form.gemini_model} setModel={set("gemini_model")} hint="Create a key at aistudio.google.com/apikey" />
+          model={form.gemini_model} setModel={set("gemini_model")} hint="Create a key at aistudio.google.com/apikey"
+          imageModel={form.gemini_image_model} setImageModel={set("gemini_image_model")} />
         <ProviderCard id="openai" name="OpenAI ChatGPT" s={s} keyVal={form.openai_api_key} setKey={set("openai_api_key")}
-          model={form.openai_model} setModel={set("openai_model")} hint="Create a key at platform.openai.com/api-keys" />
+          model={form.openai_model} setModel={set("openai_model")} hint="Create a key at platform.openai.com/api-keys"
+          imageModel={form.openai_image_model} setImageModel={set("openai_image_model")} />
       </div>
       <div className="flex items-center gap-3">
         <Button onClick={save} disabled={busy} className="rounded-full" data-testid="settings-save-api-key-btn">

@@ -24,6 +24,8 @@ def _mask(key: str) -> str:
 def _public(s: dict) -> dict:
     return {"show_name": s["show_name"], "default_provider": s["default_provider"],
             "gemini_model": s["gemini_model"], "openai_model": s["openai_model"],
+            "image_provider": s["image_provider"], "gemini_image_model": s["gemini_image_model"],
+            "openai_image_model": s["openai_image_model"],
             "gemini_configured": bool(s["gemini_api_key"]), "openai_configured": bool(s["openai_api_key"])}
 
 
@@ -35,6 +37,9 @@ class SettingsIn(BaseModel):
     openai_api_key: Optional[str] = None
     openai_model: Optional[str] = None
     extra_instructions: Optional[str] = None
+    image_provider: Optional[str] = None
+    gemini_image_model: Optional[str] = None
+    openai_image_model: Optional[str] = None
 
 
 @settings_router.get("/public")
@@ -58,6 +63,8 @@ async def update_settings(body: SettingsIn, admin: dict = Depends(require_admin)
             changes.pop(k)
     if "default_provider" in changes and changes["default_provider"] not in ("gemini", "openai"):
         raise HTTPException(status_code=400, detail="Provider must be gemini or openai")
+    if "image_provider" in changes and changes["image_provider"] not in ("gemini", "openai"):
+        raise HTTPException(status_code=400, detail="Image provider must be gemini or openai")
     changes.update({"updated_at": now_iso(), "updated_by": admin["username"]})
     await db.settings.update_one({"id": "app"}, {"$set": changes}, upsert=True)
     return await get_settings(admin)

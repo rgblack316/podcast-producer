@@ -12,6 +12,9 @@ DEFAULT_SETTINGS = {
     "openai_api_key": "",
     "openai_model": "gpt-5-mini",
     "extra_instructions": "",
+    "image_provider": "gemini",
+    "gemini_image_model": "gemini-2.5-flash-image",
+    "openai_image_model": "gpt-image-1.5",
 }
 TIMEOUT = httpx.Timeout(600.0, connect=20.0)
 

@@ -19,6 +19,9 @@ services:
       ADMIN_FORCE_RESET: ${ADMIN_FORCE_RESET}
       COOKIE_SECURE: ${COOKIE_SECURE}
       CORS_ORIGINS: ""
+      MEDIA_DIR: /data/media
+    volumes:
+      - media_data:/data/media
 
   frontend:
     build:
@@ -41,3 +44,4 @@ services:
 
 volumes:
   mongo_data:
+  media_data:

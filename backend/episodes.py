@@ -18,7 +18,8 @@ router = APIRouter(prefix="/episodes", tags=["episodes"])
 log = logging.getLogger(__name__)
 STATUSES = ["draft", "outline_approved", "script_complete", "published"]
 STAGES = ("outline", "script")
-LIST_FIELDS = {"_id": 0, "outline_versions": 0, "script_versions": 0, "outline": 0, "script": 0}
+LIST_FIELDS = {"_id": 0, "outline_versions": 0, "script_versions": 0, "outline": 0, "script": 0, "assets": 0,
+               "artwork.messages": 0, "artwork.concepts": 0}
 _tasks = set()
 
 

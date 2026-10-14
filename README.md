@@ -57,6 +57,10 @@ docker compose down                     # stop (data is kept in the volume)
 ```
 
 ## Backups
+Generated episode artwork is stored as PNG files in the `media_data` volume (`/data/media` in the backend container); back it up alongside the database:
+```bash
+docker run --rm -v bible-bytes-producer_media_data:/m -v $PWD:/b alpine tar czf /b/media-$(date +%F).tgz -C /m .
+```
 ```bash
 docker compose exec mongo mongodump --archive --db biblebytes > backup-$(date +%F).archive
 # restore

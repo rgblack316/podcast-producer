@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,8 @@ import { StepIndicator } from "@/components/StepIndicator";
 
 export default function NewEpisode() {
   const navigate = useNavigate();
-  const [form, setForm] = useState(toForm(null));
+  const location = useLocation();
+  const [form, setForm] = useState(() => toForm(location.state?.prefill || null));
   const [busy, setBusy] = useState(null);
   const valid = form.title.trim() && form.topic.trim() && form.primary_scripture.trim();
 

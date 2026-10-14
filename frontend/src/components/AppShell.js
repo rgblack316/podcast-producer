@@ -27,6 +27,7 @@ export default function AppShell({ children }) {
           <nav className="hidden md:flex items-center gap-1 ml-6">
             <NavLink to="/" end className={navCls} data-testid="nav-dashboard">Dashboard</NavLink>
             <NavLink to="/episodes" end className={navCls} data-testid="nav-library">Library</NavLink>
+            <NavLink to="/coverage" className={navCls} data-testid="nav-coverage">Coverage</NavLink>
             {user?.role === "admin" && (
               <NavLink to="/settings" className={navCls} data-testid="nav-settings">Settings</NavLink>
             )}
@@ -48,6 +49,7 @@ export default function AppShell({ children }) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="md:hidden" onClick={() => navigate("/episodes")}>Library</DropdownMenuItem>
+                <DropdownMenuItem className="md:hidden" onClick={() => navigate("/coverage")}>Coverage</DropdownMenuItem>
                 {user?.role === "admin" && (
                   <DropdownMenuItem className="md:hidden" onClick={() => navigate("/settings")}>Settings</DropdownMenuItem>
                 )}

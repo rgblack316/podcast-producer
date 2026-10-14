@@ -14,6 +14,8 @@ import { useAuth } from "@/context/AuthContext";
 import { StepIndicator } from "@/components/StepIndicator";
 import { StatusBadge } from "@/components/StatusBadge";
 import { DocStage } from "@/components/DocStage";
+import { AssetsStage } from "@/components/AssetsStage";
+import { ArtworkStudio } from "@/components/ArtworkStudio";
 import { EpisodeForm, fromForm, toForm } from "@/components/EpisodeForm";
 import { SimilarEpisodes } from "@/components/SimilarEpisodes";
 
@@ -129,7 +131,7 @@ export default function Episode() {
     if (episode) setTab(episode.status === "draft" ? "outline" : "script");
   }, [episode?.id, episode?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const generating = !!episode?.generating;
+  const generating = !!episode?.generating || !!episode?.art_generating;
   useEffect(() => {
     if (!generating) return;
     const t = setInterval(load, 3000);
@@ -160,12 +162,20 @@ export default function Episode() {
             <TabsList className="bg-[#F4EFE6] mb-5">
               <TabsTrigger value="outline" data-testid="tab-outline">Outline</TabsTrigger>
               <TabsTrigger value="script" disabled={!scriptReady && !episode.script} data-testid="tab-script">Script</TabsTrigger>
+              <TabsTrigger value="assets" data-testid="tab-assets">Show notes</TabsTrigger>
+              <TabsTrigger value="artwork" data-testid="tab-artwork">Artwork</TabsTrigger>
             </TabsList>
             <TabsContent value="outline">
               <DocStage episode={episode} stage="outline" editable={episode.status === "draft"} providers={providers} onChange={setEpisode} />
             </TabsContent>
             <TabsContent value="script">
               <DocStage episode={episode} stage="script" editable={episode.status === "outline_approved"} providers={providers} onChange={setEpisode} />
+            </TabsContent>
+            <TabsContent value="assets">
+              <AssetsStage episode={episode} providers={providers} onChange={setEpisode} />
+            </TabsContent>
+            <TabsContent value="artwork">
+              <ArtworkStudio episode={episode} providers={providers} onChange={setEpisode} />
             </TabsContent>
           </Tabs>
         </section>
