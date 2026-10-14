@@ -13,6 +13,7 @@ import { api, errMsg, fmtDate } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { StepIndicator } from "@/components/StepIndicator";
 import { StatusBadge } from "@/components/StatusBadge";
+import { format, parseISO } from "date-fns";
 import { DocStage } from "@/components/DocStage";
 import { AssetsStage } from "@/components/AssetsStage";
 import { ArtworkStudio } from "@/components/ArtworkStudio";
@@ -81,6 +82,7 @@ function IntakePanel({ episode, onChange, isAdmin, onDelete }) {
         </div>
       )}
       <Detail label="Target length">{episode.target_length}</Detail>
+      <Detail label="Target publish date">{episode.target_date ? <span data-testid="episode-target-date">{format(parseISO(episode.target_date), "EEEE, MMMM d, yyyy")}</span> : null}</Detail>
       <Detail label="Audience">{episode.audience_notes}</Detail>
       <Detail label="Guidance">{episode.guidance}</Detail>
       <div className="space-y-2">

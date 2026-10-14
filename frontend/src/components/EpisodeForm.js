@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 export const emptyEpisode = {
   title: "", episode_number: "", topic: "", primary_scripture: "", supporting_scriptures: [],
-  themes: [], target_length: "", audience_notes: "", guidance: "",
+  themes: [], target_length: "", target_date: "", audience_notes: "", guidance: "",
 };
 
 export function toForm(ep) {
@@ -64,8 +64,11 @@ export function EpisodeForm({ form, setForm }) {
           <Textarea {...bind("supporting_text", "intake-supporting-input", { rows: 3, className: "bg-[#FFFDF9] f-serif" })} />
         </Field>
       </div>
-      <div className="sm:col-span-3">
+      <div className="sm:col-span-3 grid grid-cols-2 gap-4 content-start">
         <Field id="target_length" label="Target length"><Input {...bind("target_length", "intake-length-input", { placeholder: "e.g. 15 minutes" })} /></Field>
+        <Field id="target_date" label="Target publish date" hint="Adds it to the Planner">
+          <Input type="date" {...bind("target_date", "intake-target-date-input")} />
+        </Field>
       </div>
       <div className="sm:col-span-6">
         <Field id="audience_notes" label="Audience notes">

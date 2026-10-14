@@ -31,6 +31,7 @@ class EpisodeIn(BaseModel):
     supporting_scriptures: List[str] = []
     themes: List[str] = []
     target_length: str = ""
+    target_date: str = Field(default="", pattern=r"^(\d{4}-\d{2}-\d{2})?$")
     audience_notes: str = ""
     guidance: str = ""
 
@@ -162,10 +163,23 @@ async def similar(scripture: str = "", themes: str = "", topic: str = "", exclud
     return results
 
 
+async def sync_plan_date(ep: dict, user: dict):
+    """Keep the episode's planner entry on its target publication date (creates one if needed)."""
+    date = ep.get("target_date") or None
+    res = await db.plan_items.update_one({"episode_id": ep["id"]}, {"$set": {"date": date}})
+    if res.matched_count == 0 and date:
+        await db.plan_items.insert_one({
+            "id": new_id(), "date": date, "series_id": None, "episode_id": ep["id"], "title": ep["title"],
+            "topic": ep.get("topic", ""), "primary_scripture": ep.get("primary_scripture", ""),
+            "supporting_scriptures": [], "themes": ep.get("themes", []), "notes": "",
+            "created_by": user["username"], "created_at": now_iso()})
+
+
 @router.post("")
 async def create_episode(body: EpisodeIn, user: dict = Depends(get_current_user)):
     doc = new_episode(body.model_dump(), user)
     await db.episodes.insert_one(doc)
+    await sync_plan_date(doc, user)
     return await _get(doc["id"])
 
 
@@ -175,10 +189,13 @@ async def get_episode(ep_id: str, _: dict = Depends(get_current_user)):
 
 
 @router.put("/{ep_id}")
-async def update_episode(ep_id: str, body: EpisodeIn, _: dict = Depends(get_current_user)):
-    await _get(ep_id)
+async def update_episode(ep_id: str, body: EpisodeIn, user: dict = Depends(get_current_user)):
+    old = await _get(ep_id)
     await db.episodes.update_one({"id": ep_id}, {"$set": {**derive(body.model_dump()), "updated_at": now_iso()}})
-    return await _get(ep_id)
+    ep = await _get(ep_id)
+    if (old.get("target_date") or "") != (ep.get("target_date") or ""):
+        await sync_plan_date(ep, user)
+    return ep
 
 
 @router.delete("/{ep_id}")

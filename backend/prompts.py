@@ -62,6 +62,7 @@ def intake_block(ep: dict) -> str:
         f"Supporting scriptures: {', '.join(ep.get('supporting_scriptures') or []) or 'none'}",
         f"Themes: {', '.join(ep.get('themes') or []) or 'none'}",
         f"Target length: {ep.get('target_length') or 'standard episode length'}",
+        f"Target publication date: {ep.get('target_date') or 'not set'}",
         f"Audience notes: {ep.get('audience_notes') or 'none'}",
         f"Additional guidance: {ep.get('guidance') or 'none'}",
     ])

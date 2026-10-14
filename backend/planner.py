@@ -78,6 +78,13 @@ class PlanPatch(BaseModel):
     notes: Optional[str] = None
 
 
+async def _sync_episode_date(item: dict):
+    """Moving a linked plan item also moves the episode's target publication date (unpublished episodes only)."""
+    if item and item.get("episode_id"):
+        await db.episodes.update_one({"id": item["episode_id"], "status": {"$ne": "published"}},
+                                     {"$set": {"target_date": item.get("date") or ""}})
+
+
 async def _hydrate(items: list) -> list:
     ids = [i["episode_id"] for i in items if i.get("episode_id")]
     eps = {e["id"]: e for e in await db.episodes.find({"id": {"$in": ids}}, EP_FIELDS).to_list(5000)} if ids else {}
@@ -109,6 +116,7 @@ async def create_plan(body: PlanIn, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=400, detail="Title is required")
     doc = {**data, "id": new_id(), "created_by": user["username"], "created_at": now_iso()}
     await db.plan_items.insert_one(doc)
+    await _sync_episode_date(doc)
     return (await _hydrate([{k: v for k, v in doc.items() if k != "_id"}]))[0]
 
 
@@ -120,6 +128,7 @@ async def patch_plan(item_id: str, body: PlanPatch, _: dict = Depends(get_curren
     res = await db.plan_items.update_one({"id": item_id}, {"$set": changes})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Plan item not found")
+    await _sync_episode_date(await db.plan_items.find_one({"id": item_id}, NO_ID))
     return (await _hydrate([await db.plan_items.find_one({"id": item_id}, NO_ID)]))[0]
 
 

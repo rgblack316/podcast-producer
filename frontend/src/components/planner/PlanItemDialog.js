@@ -50,7 +50,7 @@ export function PlanItemDialog({ item, series, onClose, onSaved }) {
     onSaved();
     onClose();
   };
-  const startEpisode = () => navigate("/episodes/new", { state: { prefill: { ...item, title: f.title }, plan_id: item.id } });
+  const startEpisode = () => navigate("/episodes/new", { state: { prefill: { ...item, title: f.title, target_date: f.date || "" }, plan_id: item.id } });
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>

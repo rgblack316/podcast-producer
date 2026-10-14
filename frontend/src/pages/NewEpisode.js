@@ -18,8 +18,11 @@ export default function NewEpisode() {
   const create = async (draftOutline) => {
     setBusy(draftOutline ? "draft" : "save");
     try {
-      const { data } = await api.post("/episodes", fromForm(form));
-      if (location.state?.plan_id) await api.patch(`/plan/${location.state.plan_id}`, { episode_id: data.id }).catch(() => {});
+      const body = fromForm(form);
+      const planId = location.state?.plan_id;
+      // when started from a planner slot, link that slot instead of creating a second one
+      const { data } = await api.post("/episodes", planId ? { ...body, target_date: "" } : body);
+      if (planId) await api.patch(`/plan/${planId}`, { episode_id: data.id, date: body.target_date || null }).catch(() => {});
       if (draftOutline) {
         await api.post(`/episodes/${data.id}/outline/generate`, { notes: "" })
           .catch((e) => toast.error(`Episode saved, but outline could not start: ${errMsg(e)}`));
