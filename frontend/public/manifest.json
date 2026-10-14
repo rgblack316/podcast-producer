@@ -1,0 +1,13 @@
+{
+  "short_name": "Bible Bytes",
+  "name": "Bible Bytes Producer",
+  "icons": [
+    { "src": "favicon.ico", "sizes": "64x64 48x48 32x32 16x16", "type": "image/x-icon" },
+    { "src": "logo192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "cover-512.webp", "type": "image/webp", "sizes": "512x512" }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#FAF7F2",
+  "background_color": "#FAF7F2"
+}

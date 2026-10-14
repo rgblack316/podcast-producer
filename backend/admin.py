@@ -53,6 +53,9 @@ async def get_settings(_: dict = Depends(require_admin)):
 async def update_settings(body: SettingsIn, admin: dict = Depends(require_admin)):
     changes = {k: v.strip() if isinstance(v, str) and k != "extra_instructions" else v
                for k, v in body.model_dump(exclude_none=True).items()}
+    for k in ("gemini_api_key", "openai_api_key"):
+        if k in changes and not changes[k]:
+            changes.pop(k)
     if "default_provider" in changes and changes["default_provider"] not in ("gemini", "openai"):
         raise HTTPException(status_code=400, detail="Provider must be gemini or openai")
     changes.update({"updated_at": now_iso(), "updated_by": admin["username"]})

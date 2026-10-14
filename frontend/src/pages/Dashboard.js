@@ -42,7 +42,7 @@ export default function Dashboard() {
           <h1 className="f-serif text-4xl sm:text-5xl font-semibold tracking-tight text-[#1C1917] mt-2">
             Grace and peace, {user?.name?.split(" ")[0]}.
           </h1>
-          <p className="text-stone-600 mt-2 max-w-xl">Plan the next episode, finish what's in progress, or look back at what's been covered.</p>
+          <p className="text-[#44403C] mt-2 max-w-xl">Plan the next episode, finish what's in progress, or look back at what's been covered.</p>
         </div>
         <Button size="lg" className="rounded-full" onClick={() => navigate("/episodes/new")} data-testid="dashboard-new-episode-btn">
           <Plus className="h-4 w-4 mr-1" /> Start a new episode

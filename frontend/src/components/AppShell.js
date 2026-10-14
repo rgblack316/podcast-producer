@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { BookOpen, LogOut, Plus, UserRound } from "lucide-react";
+import { LogOut, Plus, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -19,9 +19,7 @@ export default function AppShell({ children }) {
       <header className="sticky top-0 z-50 backdrop-blur-md bg-[#FAF7F2]/90 border-b border-[#E7E0D6]">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex items-center gap-4">
           <Link to="/" className="flex items-center gap-2.5 shrink-0" data-testid="brand-link">
-            <span className="h-8 w-8 rounded-md bg-[#1C1917] text-[#FDE68A] grid place-items-center">
-              <BookOpen className="h-4 w-4" />
-            </span>
+            <img src="/logo-mark.png" alt="Bible Bytes logo" className="h-9 w-9 rounded-md border border-[#E2DACD] shadow-sm" data-testid="header-logo" />
             <span className="f-serif text-xl font-semibold tracking-tight text-[#1C1917]">
               Bible Bytes <span className="italic font-normal text-[#B45309]">Producer</span>
             </span>

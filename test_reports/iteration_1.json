@@ -1,0 +1,45 @@
+{
+  "summary": "Full backend + frontend testing of the Bible Bytes Producer MVP. 32 pytest cases covering auth (login/me/refresh/logout/change-password/lockout), admin users (create/role change/reset/deactivate/self-protect), settings (public/admin/update/mask/test-provider with fake key), reference documents (upload template deactivates previous, example toggle/view/delete, non-.docx rejection, import creates published episode), and episodes (CRUD, similar matching by chapter+theme, outline/script versioning, approval/publish/reopen flow, invalid transitions, docx export, search/filter, meta) — ALL 32 PASSED. Frontend smoke-tested via Playwright across Login, Dashboard, Settings (AI/Docs/Users tabs), New Episode intake (similar-episode banner with 'Same chapter: Genesis 16 · Shared theme: grace, identity' confirmed), Outline Write-it-myself + Save version + Approve (status moves to Outline Approved and Script tab unlocks), Generate-with-fake-key error path (outline-error testid shows 'API key not valid'), Library search, Account page. Fake API keys cleared and UI_/TEST_ seed data deleted post-run. Admin NOT locked out (used throwaway usernames for 429 test).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "PUT /api/settings", "issue": "update_settings uses exclude_none=True then strips strings, so sending gemini_api_key='' DOES overwrite the saved key (sets to empty). Spec expects 'leaving key blank keeps saved key'. UI appears to compensate by only sending the field when non-empty (reload shows placeholder 'Leave blank to keep the saved key'), but the API itself has no 'blank==keep' semantics. If any client sends empty string it will clear the key."},
+      {"endpoint": "POST /api/episodes/{id}/{stage}/generate", "issue": "When no API key is configured, the endpoint still returns 200 and sets generating=... then the background task fails and surfaces 'No API key set' via last_error. Spec requested a direct 400 'No API key set'. Not a functional bug (error is surfaced in UI via outline-error) but inconsistent with the spec."},
+      {"endpoint": "GET /api/users", "issue": "No DELETE user endpoint exists — admin can only deactivate. Test-generated producer accounts accumulate in the Users list across runs."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Dashboard", "issues": ["Welcome hero text ('Grace and peace, Administrator') and subtitle use very light stone color on cream background — low contrast, may fail WCAG AA for body text."]},
+      {"screen": "Settings > AI", "issues": ["Masked API key field is rendered as an empty input with placeholder 'Leave blank to keep the saved key' and a 'No key' pill even when a key IS stored (because API returns gemini_api_key_masked only when a key exists but the input's value is always ''). Consider showing the mask value (••••••••abcd) in the input or a 'Key saved' indicator rather than 'No key'."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Decide intended semantics for PUT /api/settings with empty api_key string: either preserve existing (treat '' as 'keep') or document that empty clears. Current UI happens to work only because it omits the field.",
+    "Return 400 'No API key set' synchronously from POST /episodes/{id}/{stage}/generate (per spec) instead of starting a background task that fails.",
+    "Settings > AI: fix the 'No key' / masked display so admins can see a key is stored (show gemini_api_key_masked value, flip 'No key' pill to 'Key set').",
+    "Improve contrast of Dashboard greeting text."
+  ],
+  "critical_code_review_comments": [
+    "auth.py login_attempts lockout key is '{ip}:{username}' which is good — not DOS-able across users. Bcrypt + httpOnly cookies look correct.",
+    "episodes.py uses background asyncio.create_task without awaiting; _tasks set is used to retain references — fine for single process but will not survive reload (handled at startup via resetting generating flag with 'Generation interrupted' — nice).",
+    "admin.py update_settings strips strings for every key except extra_instructions; combined with exclude_none it causes '' to overwrite saved api keys. See action item.",
+    "episodes.py uses db.settings.update_many with `{'generating': {'$ne': None}}` on startup — good self-healing.",
+    "server.py CORS: when CORS_ORIGINS='*' the middleware is NOT added (only non-* explicit origins trigger it). Since the frontend is served from the same origin via ingress, CORS isn't needed; just note that '*' is effectively ignored."
+  ],
+  "updated_files": [
+    "/app/backend/tests/backend_test.py (new)"
+  ],
+  "success_rate": {"backend": "100% (32/32)", "frontend": "100% of critical smoke flows (login, settings, intake+similar banner, outline write/save/approve, fake-key error surface, library search, account)"},
+  "test_credentials": "admin / BibleBytes!2026 (verified login via UI + API). Producer accounts created and discarded during tests.",
+  "seed_data_creation": "Backend pytest fixtures create+teardown their own episodes/users/docs with TEST_ prefix. Playwright test created a few UI_* episodes and sample template docs; all were deleted at end of run. Fake Gemini key was CLEARED from settings post-run (gemini_configured=false, openai_configured=false confirmed).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "backend_test.py is pytest-based and self-contained — just run `pytest /app/backend/tests/backend_test.py`. It creates/removes its own data. The lockout test uses throwaway usernames to avoid locking admin. If re-running, remember PUT /settings with empty string DOES clear API keys (bug noted). The UI 'intake-primary-scripture-input' is actually `intake-scripture-input`; other testids: intake-title/episode-number/topic/scripture/themes/supporting/length/audience/guidance-input, intake-submit-button, intake-save-draft-button, intake-similar-warning-banner, episode-title, tab-outline, tab-script, outline-error. Approve button text 'Approve outline'/'Approve script', save button text 'Save version'."
+}

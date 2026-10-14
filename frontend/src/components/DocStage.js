@@ -77,7 +77,7 @@ export function DocStage({ episode, stage, editable, providers, onChange }) {
       <div className="flex flex-wrap items-center gap-2">
         {editable && (
           <Select value={provider} onValueChange={setProvider}>
-            <SelectTrigger className="w-[170px] h-9 bg-[#FFFDF9]" data-testid={`${stage}-provider-select`}><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[210px] h-9 bg-[#FFFDF9]" data-testid={`${stage}-provider-select`}><SelectValue /></SelectTrigger>
             <SelectContent>
               {providerOptions.map(([v, label, ok]) => (
                 <SelectItem key={v} value={v} disabled={!ok}>{label}{ok ? "" : " (no key)"}</SelectItem>
