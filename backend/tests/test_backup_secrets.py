@@ -1,9 +1,14 @@
 import asyncio
 import io
 import json
+import os
 import zipfile
 
 import pytest
+
+for _k, _v in {"MONGO_URL": "mongodb://unused", "DB_NAME": "t", "MEDIA_DIR": "/tmp/pp-test-media", "JWT_SECRET": "x" * 40}.items():
+    os.environ.setdefault(_k, _v)
+
 from fastapi import HTTPException
 
 import secrets_box
