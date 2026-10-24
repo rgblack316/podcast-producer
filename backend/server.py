@@ -47,6 +47,8 @@ async def startup():
     await db.episodes.create_index([("created_at", -1)])
     await db.documents.create_index("id", unique=True)
     await db.login_attempts.create_index("identifier")
+    await db.revoked_tokens.create_index("jti", unique=True)
+    await db.revoked_tokens.create_index("expires_at", expireAfterSeconds=0)
     await db.episodes.update_many({"generating": {"$ne": None}},
                                   {"$set": {"generating": None, "last_error": "Generation interrupted by a server restart"}})
     await db.episodes.update_many({"art_generating": {"$ne": None}},
