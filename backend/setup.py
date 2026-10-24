@@ -98,7 +98,7 @@ async def run_setup(body: SetupIn, request: Request, response: Response):
         if getattr(body.ai, k).strip():
             settings[k] = getattr(body.ai, k).strip()
     await db.settings.update_one({"id": "app"}, {"$set": settings}, upsert=True)
-    set_auth_cookies(response, admin["id"], request)
+    set_auth_cookies(response, admin, request)
     return {k: v for k, v in admin.items() if k not in ("_id", "password_hash", "mfa_secret")}
 
 

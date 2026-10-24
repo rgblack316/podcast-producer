@@ -16,7 +16,8 @@ REFRESH_DAYS = 7
 MAX_ATTEMPTS = 5
 MAX_USER_ATTEMPTS = 20  # per username across all IPs: backstop against distributed or spoofed-IP guessing
 LOCKOUT_MINUTES = 15
-USER_PUBLIC = {"_id": 0, "password_hash": 0, "mfa_secret": 0}
+USER_PUBLIC = {"_id": 0, "password_hash": 0, "mfa_secret": 0, "token_version": 0}
+USER_AUTH = {"_id": 0, "password_hash": 0, "mfa_secret": 0}  # keeps token_version for session checks (never returned)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -33,8 +34,10 @@ def _secret() -> str:
     return os.environ["JWT_SECRET"]
 
 
-def _token(user_id: str, kind: str, delta: timedelta) -> str:
-    payload = {"sub": user_id, "type": kind, "exp": datetime.now(timezone.utc) + delta}
+def _token(user_id: str, kind: str, delta: timedelta, version: int = 0) -> str:
+    # tv = the user's token_version when issued; jti lets a single token be revoked (logout).
+    payload = {"sub": user_id, "type": kind, "tv": version, "jti": new_id(),
+               "exp": datetime.now(timezone.utc) + delta}
     return jwt.encode(payload, _secret(), algorithm=JWT_ALGORITHM)
 
 
@@ -47,15 +50,17 @@ def _cookie_secure(request: Request) -> bool:
     return mode == "true"
 
 
-def set_auth_cookies(response: Response, user_id: str, request: Request):
+def set_auth_cookies(response: Response, user: dict, request: Request):
+    """`user` needs id and (optionally) token_version. Bumping a user's token_version signs out all their sessions."""
+    uid, version = user["id"], user.get("token_version", 0)
     opts = dict(httponly=True, secure=_cookie_secure(request), samesite="lax", path="/")
-    response.set_cookie("access_token", _token(user_id, "access", timedelta(minutes=ACCESS_MINUTES)),
+    response.set_cookie("access_token", _token(uid, "access", timedelta(minutes=ACCESS_MINUTES), version),
                         max_age=ACCESS_MINUTES * 60, **opts)
-    response.set_cookie("refresh_token", _token(user_id, "refresh", timedelta(days=REFRESH_DAYS)),
+    response.set_cookie("refresh_token", _token(uid, "refresh", timedelta(days=REFRESH_DAYS), version),
                         max_age=REFRESH_DAYS * 86400, **opts)
 
 
-def _decode(token: str, kind: str) -> str:
+def _claims(token: str, kind: str) -> dict:
     try:
         payload = jwt.decode(token, _secret(), algorithms=[JWT_ALGORITHM])
     except jwt.ExpiredSignatureError:
@@ -64,7 +69,35 @@ def _decode(token: str, kind: str) -> str:
         raise HTTPException(status_code=401, detail="Invalid token")
     if payload.get("type") != kind:
         raise HTTPException(status_code=401, detail="Invalid token type")
-    return payload["sub"]
+    return payload
+
+
+async def _user_for_token(token: str, kind: str) -> dict:
+    """Validate a token against revocations and the user's current token_version. Returns the user incl. token_version."""
+    payload = _claims(token, kind)
+    jti = payload.get("jti")
+    if jti and await db.revoked_tokens.find_one({"jti": jti}, NO_ID):
+        raise HTTPException(status_code=401, detail="Session ended")
+    user = await db.users.find_one({"id": payload["sub"]}, USER_AUTH)
+    if not user or not user.get("active", True):
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+    if payload.get("tv", 0) != user.get("token_version", 0):  # tokens from before the password/status change
+        raise HTTPException(status_code=401, detail="Session expired, please sign in again")
+    return user
+
+
+async def _revoke(token: Optional[str]):
+    """Deny-list one token until it would have expired anyway (TTL index cleans it up)."""
+    if not token:
+        return
+    try:
+        payload = jwt.decode(token, _secret(), algorithms=[JWT_ALGORITHM], options={"verify_exp": False})
+    except jwt.InvalidTokenError:
+        return
+    jti, exp = payload.get("jti"), payload.get("exp")
+    if jti and exp:
+        await db.revoked_tokens.update_one({"jti": jti}, {"$set": {
+            "jti": jti, "expires_at": datetime.fromtimestamp(exp, tz=timezone.utc)}}, upsert=True)
 
 
 async def get_current_user(request: Request) -> dict:
@@ -75,9 +108,8 @@ async def get_current_user(request: Request) -> dict:
             token = header[7:]
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    user = await db.users.find_one({"id": _decode(token, "access")}, USER_PUBLIC)
-    if not user or not user.get("active", True):
-        raise HTTPException(status_code=401, detail="User not found or inactive")
+    user = await _user_for_token(token, "access")
+    user.pop("token_version", None)
     return user
 
 
@@ -135,7 +167,7 @@ async def login(body: LoginIn, request: Request, response: Response):
     await db.login_attempts.delete_many({"identifier": {"$in": [identifier, user_identifier]}})
     # MFA hook: when user["mfa_enabled"] is true, a TOTP challenge step will be inserted here (Phase 2).
     await db.users.update_one({"id": user["id"]}, {"$set": {"last_login_at": now_iso()}})
-    set_auth_cookies(response, user["id"], request)
+    set_auth_cookies(response, user, request)
     return await db.users.find_one({"id": user["id"]}, USER_PUBLIC)
 
 
@@ -144,15 +176,18 @@ async def refresh(request: Request, response: Response):
     token = request.cookies.get("refresh_token")
     if not token:
         raise HTTPException(status_code=401, detail="No refresh token")
-    user = await db.users.find_one({"id": _decode(token, "refresh")}, USER_PUBLIC)
-    if not user or not user.get("active", True):
-        raise HTTPException(status_code=401, detail="User not found or inactive")
-    set_auth_cookies(response, user["id"], request)
+    user = await _user_for_token(token, "refresh")
+    set_auth_cookies(response, user, request)
+    user.pop("token_version", None)
     return user
 
 
 @router.post("/logout")
-async def logout(response: Response):
+async def logout(request: Request, response: Response):
+    header = request.headers.get("Authorization", "")
+    for t in (request.cookies.get("access_token"), request.cookies.get("refresh_token"),
+              header[7:] if header.startswith("Bearer ") else None):
+        await _revoke(t)
     response.delete_cookie("access_token", path="/")
     response.delete_cookie("refresh_token", path="/")
     return {"ok": True}
@@ -164,11 +199,15 @@ async def me(user: dict = Depends(get_current_user)):
 
 
 @router.post("/change-password")
-async def change_password(body: ChangePasswordIn, user: dict = Depends(get_current_user)):
+async def change_password(body: ChangePasswordIn, request: Request, response: Response,
+                          user: dict = Depends(get_current_user)):
     full = await db.users.find_one({"id": user["id"]}, {"_id": 0})
     if not verify_password(body.current_password, full["password_hash"]):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
-    await db.users.update_one({"id": user["id"]}, {"$set": {"password_hash": hash_password(body.new_password)}})
+    # Bumping token_version signs out every other session (and any stolen token); keep this one signed in.
+    await db.users.update_one({"id": user["id"]}, {"$set": {"password_hash": hash_password(body.new_password)},
+                                                   "$inc": {"token_version": 1}})
+    set_auth_cookies(response, await db.users.find_one({"id": user["id"]}, {"_id": 0, "id": 1, "token_version": 1}), request)
     return {"ok": True}
 
 
@@ -197,7 +236,7 @@ def user_doc(username: str, name: str, password: str, role: str) -> dict:
     return {
         "id": new_id(), "username": username.strip().lower(), "name": name or username,
         "password_hash": hash_password(password), "role": role, "active": True,
-        "mfa_enabled": False, "mfa_secret": None, "created_at": now_iso(), "last_login_at": None,
+        "mfa_enabled": False, "mfa_secret": None, "token_version": 0, "created_at": now_iso(), "last_login_at": None,
     }
 
 
@@ -221,7 +260,10 @@ async def update_user(user_id: str, body: UserUpdate, admin: dict = Depends(requ
     if user_id == admin["id"] and (changes.get("active") is False or changes.get("role") == "producer"):
         raise HTTPException(status_code=400, detail="You cannot deactivate or demote your own account")
     if changes:
-        await db.users.update_one({"id": user_id}, {"$set": changes})
+        update = {"$set": changes}
+        if changes.get("active") is False:
+            update["$inc"] = {"token_version": 1}  # deactivation also kills any tokens that are still outstanding
+        await db.users.update_one({"id": user_id}, update)
     user = await db.users.find_one({"id": user_id}, USER_PUBLIC)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -230,7 +272,8 @@ async def update_user(user_id: str, body: UserUpdate, admin: dict = Depends(requ
 
 @users_router.post("/{user_id}/reset-password")
 async def reset_password(user_id: str, body: ResetPasswordIn, _: dict = Depends(require_admin)):
-    res = await db.users.update_one({"id": user_id}, {"$set": {"password_hash": hash_password(body.new_password)}})
+    res = await db.users.update_one({"id": user_id}, {"$set": {"password_hash": hash_password(body.new_password)},
+                                                      "$inc": {"token_version": 1}})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
     return {"ok": True}
@@ -261,4 +304,5 @@ async def seed_admin():
         await db.users.insert_one(user_doc(username, "Administrator", password, "admin"))
     elif os.environ.get("ADMIN_FORCE_RESET", "false").lower() == "true":
         await db.users.update_one({"username": username}, {"$set": {
-            "password_hash": hash_password(password), "active": True, "role": "admin"}})
+            "password_hash": hash_password(password), "active": True, "role": "admin"},
+            "$inc": {"token_version": 1}})
