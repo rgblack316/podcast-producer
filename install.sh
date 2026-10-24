@@ -84,7 +84,7 @@ else
   ok "HTTPS cookies: $SECURE"
 fi
 [[ $TTY_OK -eq 1 ]] && exec 3<&-
-SETUP_TOKEN=$(openssl rand -hex 6)
+SETUP_TOKEN=$(openssl rand -hex 16)
 
 cat > .env <<EOF
 DB_NAME=biblebytes

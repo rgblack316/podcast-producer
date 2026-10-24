@@ -49,7 +49,7 @@ function RestorePanel({ token, onBack }) {
   );
 }
 
-export default function Setup({ tokenRequired }) {
+export default function Setup({ tokenRequired, disabled }) {
   const [mode, setMode] = useState(null);
   const [step, setStep] = useState(0);
   const [token, setToken] = useState("");
@@ -72,6 +72,18 @@ export default function Setup({ tokenRequired }) {
       window.location.href = "/";
     } catch (e) { toast.error(errMsg(e)); setBusy(false); }
   };
+  if (disabled) {
+    return (
+      <div className="min-h-screen grid place-items-center p-6 paper-grain" data-testid="setup-locked">
+        <div className="card-warm p-8 max-w-lg space-y-3">
+          <h1 className="f-serif text-2xl font-semibold">Setup is locked</h1>
+          <p className="text-sm text-stone-600">This server has no SETUP_TOKEN, so first-run setup is turned off. Add a line like
+            <code className="mx-1">SETUP_TOKEN=some-long-random-value</code> to the server's .env file, then run
+            <code className="mx-1">sudo podcast-producer-upgrade</code> and reload this page.</p>
+        </div>
+      </div>
+    );
+  }
   const bind = (obj, setObj, k, testId, props = {}) => ({ value: obj[k], onChange: (e) => setObj({ ...obj, [k]: e.target.value }), className: "bg-[#FFFDF9]", "data-testid": testId, ...props });
 
   return (

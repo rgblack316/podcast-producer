@@ -46,7 +46,7 @@ function App() {
   if (setup.needs_setup) {
     return (
       <div className="App">
-        <Setup tokenRequired={setup.token_required} />
+        <Setup tokenRequired={setup.token_required} disabled={setup.setup_disabled} />
         <Toaster position="bottom-right" richColors />
       </div>
     );
