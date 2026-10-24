@@ -29,7 +29,7 @@ function UploadButton({ kind, multiple, onDone, label }) {
   };
   return (
     <>
-      <input ref={ref} type="file" accept=".docx" multiple={multiple} className="hidden" onChange={(e) => upload([...e.target.files])}
+      <input ref={ref} type="file" accept=".docx,.pdf,.txt,.md,.markdown,.rtf,.odt,.html,.htm,.csv,.tsv,.rst,.text,.log,.json,.yaml,.yml,.xml" multiple={multiple} className="hidden" onChange={(e) => upload([...e.target.files])}
         data-testid={`settings-docx-upload-input-${kind}`} />
       <Button onClick={() => ref.current.click()} disabled={busy} className="rounded-full" data-testid={`upload-${kind}-btn`}>
         {busy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Upload className="h-4 w-4 mr-1.5" />} {label}
