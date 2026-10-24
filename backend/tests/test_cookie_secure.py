@@ -38,6 +38,6 @@ def test_set_auth_cookies_flag(monkeypatch):
     monkeypatch.setenv("COOKIE_SECURE", "auto")
     for scheme, has_secure in (("https", True), ("http", False)):
         resp = Response()
-        auth.set_auth_cookies(resp, "u1", req(scheme))
+        auth.set_auth_cookies(resp, {"id": "u1"}, req(scheme))
         cookies = [v.decode() for k, v in resp.raw_headers if k == b"set-cookie"]
         assert len(cookies) == 2 and all(("Secure" in c) is has_secure for c in cookies), cookies
