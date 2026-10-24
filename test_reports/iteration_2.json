@@ -36,7 +36,7 @@
     "/app/backend/tests/test_iteration2.py (new, 15 pytest cases)"
   ],
   "success_rate": {"backend": "100% (47/47 across both test files)", "frontend": "100% of critical iteration-2 flows (settings image provider save+persist, coverage grid+suggestion prefill, assets locked/generate, artwork concept-pick+image render+unauth-block)"},
-  "test_credentials": "admin / BibleBytes!2026",
+  "test_credentials": "admin / <redacted>",
   "seed_data_creation": "During run created UI_IT2_Show (script_complete + fake artwork image + concept) and UI_IT2_Draft, plus coverage_suggestions id='latest' with one item. All cleaned up post-run (verified 0 UI_ episodes, 0 coverage_suggestions, api keys cleared).",
   "retest_needed": false,
   "should_main_agent_self_test": true,

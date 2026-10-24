@@ -1,9 +1,12 @@
 # Auth Testing Playbook (username/password JWT, httpOnly cookies)
 
+Set `URL` (e.g. http://localhost:8001), `ADMIN_USERNAME` and `ADMIN_PASSWORD` for a test instance first. The pytest suites read
+`REACT_APP_BACKEND_URL`, `ADMIN_USERNAME` and `ADMIN_PASSWORD` from the environment; never commit real credentials.
+
 1. Mongo: `db.users.find({role:"admin"})` — password_hash starts with `$2b$`; unique index on users.username; index on login_attempts.identifier.
 2. API:
 ```
-curl -c cookies.txt -X POST $URL/api/auth/login -H "Content-Type: application/json" -d '{"username":"admin","password":"BibleBytes!2026"}'
+curl -c cookies.txt -X POST $URL/api/auth/login -H "Content-Type: application/json" -d "{\"username\":\"$ADMIN_USERNAME\",\"password\":\"$ADMIN_PASSWORD\"}"
 curl -b cookies.txt $URL/api/auth/me
 ```
 Login returns the user (no password_hash) and sets access_token + refresh_token cookies. /me returns the same user.

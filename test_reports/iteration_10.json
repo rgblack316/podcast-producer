@@ -27,7 +27,7 @@
   ],
   "updated_files": ["/app/backend/tests/test_delete_user.py (new)"],
   "success_rate": {"backend": "100% (6/6)", "frontend": "100% (smoke)"},
-  "test_credentials": "admin / BibleBytes!2026",
+  "test_credentials": "admin / <redacted>",
   "seed_data_creation": "Tests create qa_del_* producers/admins and delete them within the same test (plus a cleanup fixture). The UI smoke created and deleted qa_del_993120. No pre-existing user was modified or deleted. conftest also snapshots+restores PRESERVE collections.",
   "retest_needed": false,
   "should_main_agent_self_test": false,

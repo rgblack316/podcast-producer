@@ -29,7 +29,7 @@
   ],
   "updated_files": [],
   "success_rate": {"backend": "N/A", "frontend": "100%"},
-  "test_credentials": "admin / BibleBytes!2026",
+  "test_credentials": "admin / <redacted>",
   "seed_data_creation": "None — read-only test on real data",
   "retest_needed": false,
   "should_main_agent_self_test": false,

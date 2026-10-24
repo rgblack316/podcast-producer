@@ -30,7 +30,7 @@
     "/app/tests/rss_fixture/feed_art.xml, art.png (temporary, deleted after tests)"
   ],
   "success_rate": {"backend": "100% (11/11 iteration_6 tests)", "frontend": "100% (sync panel, feed-sync buttons, series panel + dialog all render & function)"},
-  "test_credentials": "admin / BibleBytes!2026 (from /app/memory/test_credentials.md)",
+  "test_credentials": "admin / <redacted> (from /app/memory/test_credentials.md)",
   "seed_data_creation": "Temporary: TEST_producer_i6 user (deleted), TEST_i6_SeriesA/B series (deleted), temp episode for sync test (deleted). Fixture served art.png via python -m http.server 8099 (killed). feed_art.xml generated and removed. Final DB state verified: 118 rss_items, 2 imported episodes with artwork+notes preserved, gemini key intact.",
   "retest_needed": false,
   "main_agent_can_self_test": true,

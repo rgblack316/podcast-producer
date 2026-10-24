@@ -7,10 +7,10 @@ import uuid
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://scripture-scribe-hub.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "http://localhost:8001").rstrip("/")
 API = f"{BASE_URL}/api"
-ADMIN_USER = "admin"
-ADMIN_PASS = "BibleBytes!2026"
+ADMIN_USER = os.environ.get("ADMIN_USERNAME", "admin")
+ADMIN_PASS = os.environ["ADMIN_PASSWORD"]
 FEED_URL = "http://localhost:8099/feed.xml"
 VTT_URL = "http://localhost:8099/t3.vtt"
 

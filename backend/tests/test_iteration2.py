@@ -7,11 +7,11 @@ from pathlib import Path
 import pytest
 import requests
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://scripture-scribe-hub.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "http://localhost:8001").rstrip("/")
 API = f"{BASE_URL}/api"
 MEDIA_DIR = Path(os.environ.get("MEDIA_DIR", "/app/backend/media"))
-ADMIN_USER = "admin"
-ADMIN_PASS = "BibleBytes!2026"
+ADMIN_USER = os.environ.get("ADMIN_USERNAME", "admin")
+ADMIN_PASS = os.environ["ADMIN_PASSWORD"]
 
 
 @pytest.fixture(scope="module")
