@@ -2,7 +2,6 @@ import asyncio
 import base64
 import json
 import logging
-import os
 import re
 from pathlib import Path
 from typing import List, Optional
@@ -18,11 +17,11 @@ from auth import get_current_user
 from bible import BOOKS
 from core import db, now_iso, new_id, NO_ID
 from episodes import _get
+from media import MEDIA_DIR, episode_dir, episode_image_path  # noqa: F401
 
 router = APIRouter(tags=["extras"])
 log = logging.getLogger(__name__)
 _tasks = set()
-MEDIA_DIR = Path(os.environ["MEDIA_DIR"])
 OLD_TESTAMENT = [b for b, _ in BOOKS[:39]]
 
 
@@ -259,9 +258,8 @@ async def _gemini_image(key: str, model: str, prompt: str) -> bytes:
 
 async def save_image_bytes(ep_id: str, data: bytes, meta: dict) -> str:
     img_id = new_id()
-    folder = MEDIA_DIR / ep_id
-    folder.mkdir(parents=True, exist_ok=True)
-    (folder / f"{img_id}.png").write_bytes(data)
+    episode_dir(ep_id).mkdir(parents=True, exist_ok=True)
+    episode_image_path(ep_id, img_id).write_bytes(data)
     ep = await _get(ep_id)
     art = _artwork(ep)
     img = {"id": img_id, "concept_id": None, "created_at": now_iso(), **meta}
@@ -286,9 +284,8 @@ async def _run_image(ep_id: str, provider: str, prompt: str, concept_id: str | N
         fn = _gemini_image if provider == "gemini" else _openai_image
         data = await fn(s[f"{provider}_api_key"], s[f"{provider}_image_model"], prompt)
         img_id = new_id()
-        folder = MEDIA_DIR / ep_id
-        folder.mkdir(parents=True, exist_ok=True)
-        (folder / f"{img_id}.png").write_bytes(data)
+        episode_dir(ep_id).mkdir(parents=True, exist_ok=True)
+        episode_image_path(ep_id, img_id).write_bytes(data)
         img = {"id": img_id, "prompt": prompt, "concept_id": concept_id, "provider": f"{provider}:{s[f'{provider}_image_model']}",
                "created_by": user["username"], "created_at": now_iso()}
         ep = await _get(ep_id)
@@ -320,9 +317,7 @@ async def generate_artwork(ep_id: str, body: ArtGenIn, user: dict = Depends(get_
 
 @router.get("/episodes/{ep_id}/artwork/{img_id}.png")
 async def artwork_file(ep_id: str, img_id: str, _: dict = Depends(get_current_user)):
-    if not re.fullmatch(r"[0-9a-f-]{36}", img_id) or not re.fullmatch(r"[0-9a-f-]{36}", ep_id):
-        raise HTTPException(status_code=404, detail="Not found")
-    path = MEDIA_DIR / ep_id / f"{img_id}.png"
+    path = episode_image_path(ep_id, img_id)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
     return FileResponse(path, media_type=_sniff(path), headers={"Cache-Control": "private, max-age=86400"})
@@ -344,7 +339,7 @@ async def delete_artwork(ep_id: str, img_id: str, _: dict = Depends(get_current_
     images: List[dict] = [i for i in art["images"] if i["id"] != img_id]
     if len(images) == len(art["images"]):
         raise HTTPException(status_code=404, detail="Image not found")
-    (MEDIA_DIR / ep_id / f"{img_id}.png").unlink(missing_ok=True)
+    episode_image_path(ep_id, img_id).unlink(missing_ok=True)
     selected = art["selected_image_id"] if art["selected_image_id"] != img_id else (images[-1]["id"] if images else None)
     await db.episodes.update_one({"id": ep_id}, {"$set": {"artwork.images": images, "artwork.selected_image_id": selected}})
     return await _get(ep_id)
