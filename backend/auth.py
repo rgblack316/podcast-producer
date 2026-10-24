@@ -14,6 +14,7 @@ JWT_ALGORITHM = "HS256"
 ACCESS_MINUTES = 30
 REFRESH_DAYS = 7
 MAX_ATTEMPTS = 5
+MAX_USER_ATTEMPTS = 20  # per username across all IPs: backstop against distributed or spoofed-IP guessing
 LOCKOUT_MINUTES = 15
 USER_PUBLIC = {"_id": 0, "password_hash": 0, "mfa_secret": 0}
 
@@ -92,29 +93,41 @@ class ChangePasswordIn(BaseModel):
 
 
 def _client_ip(request: Request) -> str:
-    return request.headers.get("CF-Connecting-IP") or request.headers.get("X-Forwarded-For", "").split(",")[0].strip() \
-        or (request.client.host if request.client else "unknown")
+    # Never read client-supplied headers here. nginx overwrites X-Forwarded-For with the verified peer address
+    # and uvicorn (--proxy-headers) copies it into request.client.
+    return request.client.host if request.client else "unknown"
+
+
+async def _is_locked(identifier: str) -> bool:
+    attempt = await db.login_attempts.find_one({"identifier": identifier}, NO_ID)
+    return bool(attempt and attempt.get("locked_until") and attempt["locked_until"] > now_iso())
+
+
+async def _record_failure(identifier: str, limit: int):
+    attempt = await db.login_attempts.find_one({"identifier": identifier}, NO_ID)
+    count = (attempt or {}).get("count", 0) + 1
+    update = {"identifier": identifier, "count": count, "updated_at": now_iso()}
+    if count >= limit:
+        update["locked_until"] = (datetime.now(timezone.utc) + timedelta(minutes=LOCKOUT_MINUTES)).isoformat()
+        update["count"] = 0
+    await db.login_attempts.update_one({"identifier": identifier}, {"$set": update}, upsert=True)
 
 
 @router.post("/login")
 async def login(body: LoginIn, request: Request, response: Response):
     username = body.username.strip().lower()
     identifier = f"{_client_ip(request)}:{username}"
-    attempt = await db.login_attempts.find_one({"identifier": identifier}, NO_ID)
-    if attempt and attempt.get("locked_until") and attempt["locked_until"] > now_iso():
+    user_identifier = f"user:{username}"
+    if await _is_locked(identifier) or await _is_locked(user_identifier):
         raise HTTPException(status_code=429, detail="Too many failed attempts. Try again in 15 minutes.")
 
     user = await db.users.find_one({"username": username}, {"_id": 0})
     if not user or not user.get("active", True) or not verify_password(body.password, user["password_hash"]):
-        count = (attempt or {}).get("count", 0) + 1
-        update = {"identifier": identifier, "count": count, "updated_at": now_iso()}
-        if count >= MAX_ATTEMPTS:
-            update["locked_until"] = (datetime.now(timezone.utc) + timedelta(minutes=LOCKOUT_MINUTES)).isoformat()
-            update["count"] = 0
-        await db.login_attempts.update_one({"identifier": identifier}, {"$set": update}, upsert=True)
+        await _record_failure(identifier, MAX_ATTEMPTS)
+        await _record_failure(user_identifier, MAX_USER_ATTEMPTS)
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    await db.login_attempts.delete_one({"identifier": identifier})
+    await db.login_attempts.delete_many({"identifier": {"$in": [identifier, user_identifier]}})
     # MFA hook: when user["mfa_enabled"] is true, a TOTP challenge step will be inserted here (Phase 2).
     await db.users.update_one({"id": user["id"]}, {"$set": {"last_login_at": now_iso()}})
     set_auth_cookies(response, user["id"])
