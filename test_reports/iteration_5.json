@@ -32,7 +32,7 @@
     "/app/backend/tests/test_abort_safe.py (new)"
   ],
   "success_rate": {"backend": "100% for abort/UI flow (2/2 in test_abort_safe); 90% overall (69/77 across full suite, 8 pre-existing env/network failures)", "frontend": "100%"},
-  "test_credentials": "admin / BibleBytes!2026 (from /app/memory/test_credentials.md and backend/.env)",
+  "test_credentials": "admin / <redacted> (from /app/memory/test_credentials.md and backend/.env)",
   "seed_data_creation": "Temporarily inserted 6 TEST_ABORT_* rss_items for abort test; all deleted in finally block. Verified count returned to 118.",
   "retest_needed": false,
   "main_agent_can_self_test": true,

@@ -36,7 +36,7 @@
     "/app/backend/tests/test_iteration3.py (new, 20 pytest cases)"
   ],
   "success_rate": {"backend": "100% (67/67 across all three test files)", "frontend": "100% of critical iteration-3 flows (RSS fetch/invalid-url/edit-dialog, Planner series+plan create, month nav, chip edit/delete, nav regression)"},
-  "test_credentials": "admin / BibleBytes!2026",
+  "test_credentials": "admin / <redacted>",
   "seed_data_creation": "During run: UI_IT3_Series + one plan item for 2026-02-10, plus 3 rss_items from fixture. All cleaned up post-run (verified 0 rss_items/rss_jobs/series/plan_items/coverage_suggestions; only 'The God Who Sees' episode remains; keys/rss_feed_url blanked).",
   "retest_needed": false,
   "should_main_agent_self_test": true,

@@ -18,7 +18,7 @@
   ],
   "updated_files": ["/app/backend/tests/test_iteration7.py (new)"],
   "success_rate": {"backend": "100% (4/4 iteration_7 tests)", "frontend": "100% (series list, detail, episode->series link, planner sidebar link)"},
-  "test_credentials": "admin / BibleBytes!2026",
+  "test_credentials": "admin / <redacted>",
   "seed_data_creation": "Temporary TEST_i7_cover series created by test_full_cover_art_flow; deleted at the end of the test (and media folder removed). plan_items snapshot/restore handled by conftest.py — real Psalms membership of episode e625d168 is restored after the suite. Post-test DB state verified: 3 series, 2 Psalms plan_items, gemini_api_key length 53.",
   "retest_needed": false,
   "main_agent_can_self_test": true,

@@ -43,7 +43,7 @@
     "/app/backend/tests/test_target_date.py (new)"
   ],
   "success_rate": {"backend": "89% (8/9)", "frontend": "100% (smoke)"},
-  "test_credentials": "admin / BibleBytes!2026",
+  "test_credentials": "admin / <redacted>",
   "seed_data_creation": "Tests create TEST_* episodes and plan_items and clean them up via fixtures/DELETE. One UI smoke episode created and deleted (DELETE 200). Note: due to the delete bug, UI smoke test leaves an orphan plan_item on 2027-12-15 titled 'TEST_UI_target_date_smoke'. Main agent should clean this up or let it clear when the delete fix is applied.",
   "retest_needed": true,
   "should_main_agent_self_test": true,

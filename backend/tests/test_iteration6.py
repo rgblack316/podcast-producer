@@ -16,7 +16,7 @@ if not BASE_URL:
     load_dotenv("/app/frontend/.env")
     BASE_URL = os.environ["REACT_APP_BACKEND_URL"].rstrip("/")
 
-ADMIN = {"username": "admin", "password": "BibleBytes!2026"}
+ADMIN = {"username": os.environ.get("ADMIN_USERNAME", "admin"), "password": os.environ["ADMIN_PASSWORD"]}
 
 
 # ------------------------------- fixtures -------------------------------

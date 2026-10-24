@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 load_dotenv("/app/frontend/.env")
 BASE = os.environ["REACT_APP_BACKEND_URL"].rstrip("/") + "/api"
-ADMIN = {"username": "admin", "password": "BibleBytes!2026"}
+ADMIN = {"username": os.environ.get("ADMIN_USERNAME", "admin"), "password": os.environ["ADMIN_PASSWORD"]}
 PSALMS_ID = "a3aab385-a728-4514-a397-6dc4e6cabf25"
 EP_PSALM = "e625d168-4a75-43cd-98f9-d1df18ff7191"  # 'Our Refuge and Strength' - has feed artwork
 MEDIA = Path("/app/backend/media")

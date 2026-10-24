@@ -37,7 +37,7 @@
     "/app/backend/tests/backend_test.py (new)"
   ],
   "success_rate": {"backend": "100% (32/32)", "frontend": "100% of critical smoke flows (login, settings, intake+similar banner, outline write/save/approve, fake-key error surface, library search, account)"},
-  "test_credentials": "admin / BibleBytes!2026 (verified login via UI + API). Producer accounts created and discarded during tests.",
+  "test_credentials": "admin / <redacted> (verified login via UI + API). Producer accounts created and discarded during tests.",
   "seed_data_creation": "Backend pytest fixtures create+teardown their own episodes/users/docs with TEST_ prefix. Playwright test created a few UI_* episodes and sample template docs; all were deleted at end of run. Fake Gemini key was CLEARED from settings post-run (gemini_configured=false, openai_configured=false confirmed).",
   "retest_needed": false,
   "should_main_agent_self_test": true,

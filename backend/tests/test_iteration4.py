@@ -20,8 +20,8 @@ if not BASE_URL:
     except FileNotFoundError:
         pass
 API = f"{BASE_URL}/api"
-ADMIN_USER = "admin"
-ADMIN_PASS = "BibleBytes!2026"
+ADMIN_USER = os.environ.get("ADMIN_USERNAME", "admin")
+ADMIN_PASS = os.environ["ADMIN_PASSWORD"]
 
 
 # ---------- fixtures ----------
