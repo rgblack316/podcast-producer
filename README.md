@@ -122,6 +122,7 @@ Extra hardening (optional):
 | `JWT_SECRET` | Long random string used to sign login tokens (`openssl rand -hex 32`) |
 | `SETUP_TOKEN` | Required to complete the first-run wizard, so strangers can't claim the admin account. If it is empty, setup is locked and cannot be completed. Wrong guesses are rate-limited |
 | `AI_ACTIONS_PER_HOUR` | Per-user cap on AI actions (outlines, scripts, show notes, topic ideas, artwork), to protect your API budget. Default `30`; `0` turns it off |
+| `RESTORE_MAX_MB` / `RESTORE_MAX_UNCOMPRESSED_MB` | Size limits for restoring a backup (uploaded file / unpacked contents). Defaults `2048` / `4096` |
 | `COOKIE_SECURE` | `auto` (default): login cookies are marked Secure only for HTTPS requests that arrive through the bundled tunnel, so both the tunnel and plain-http LAN sign-in work. `true` forces Secure (LAN http sign-in then fails); `false` never sets it |
 | `APP_PORT` | Port on the server where the web app is published (default `8080`) |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Optional tunnel token. When set, the `cloudflared` container runs |

@@ -32,6 +32,10 @@ services:
       AI_ACTIONS_PER_HOUR: ${AI_ACTIONS_PER_HOUR:-30}
       CORS_ORIGINS: ""
       MEDIA_DIR: /data/media
+      # Large uploads and backups use the media volume, not memory-backed /tmp
+      TMPDIR: /data/media/.tmp
+      RESTORE_MAX_MB: ${RESTORE_MAX_MB:-2048}
+      RESTORE_MAX_UNCOMPRESSED_MB: ${RESTORE_MAX_UNCOMPRESSED_MB:-4096}
     volumes:
       - media_data:/data/media
 
