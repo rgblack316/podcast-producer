@@ -3,11 +3,13 @@ import html
 import json
 import logging
 import re
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ET  # only for ET.ParseError; parsing goes through defusedxml
 from email.utils import parsedate_to_datetime
 from typing import List, Optional
 
+import defusedxml.ElementTree as DET
 import httpx
+from defusedxml import DefusedXmlException
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
@@ -16,6 +18,7 @@ import prompts
 from auth import require_admin
 from core import db, now_iso, new_id, NO_ID
 from episodes import new_episode
+from safe_http import safe_get
 
 router = APIRouter(prefix="/rss", tags=["rss"])
 log = logging.getLogger(__name__)
@@ -25,6 +28,9 @@ LIST_FIELDS = {"_id": 0, "content": 0, "description": 0}
 _tasks = set()
 CONCURRENCY = 3
 AUTH_ERROR = re.compile(r"error (401|403)\b|API key not valid|API_KEY_INVALID|invalid_api_key|Incorrect API key", re.I)
+MAX_FEED_BYTES = 25 * 1024 * 1024
+MAX_TRANSCRIPT_BYTES = 5 * 1024 * 1024
+MAX_IMAGE_BYTES = 15 * 1024 * 1024
 UA = {"User-Agent": "BibleBytesProducer/1.0 (+self-hosted)"}
 
 
@@ -48,7 +54,7 @@ def _episode_number(item, title: str) -> str:
 
 
 def parse_feed(xml_bytes: bytes) -> list:
-    root = ET.fromstring(xml_bytes)
+    root = DET.fromstring(xml_bytes)  # refuses DTDs/entities (XML bomb protection)
     items = []
     for it in root.iter("item"):
         title = _text(it, "title")
@@ -91,11 +97,11 @@ def transcript_to_text(body: str, ctype: str) -> str:
     return body.strip()
 
 
-async def fetch_transcript(client: httpx.AsyncClient, transcripts: list) -> str:
+async def fetch_transcript(transcripts: list) -> str:
     order = sorted(transcripts, key=lambda t: 0 if "text/plain" in t["type"] else 1 if "vtt" in t["type"] or "srt" in t["type"] else 2)
     for t in order:
         try:
-            r = await client.get(t["url"], follow_redirects=True)
+            r = await safe_get(t["url"], max_bytes=MAX_TRANSCRIPT_BYTES, headers=UA)
             if r.status_code < 400:
                 text = transcript_to_text(r.text, t["type"] or r.headers.get("content-type", ""))
                 if len(text) > 200:
@@ -116,11 +122,10 @@ async def fetch_feed(body: FetchIn, admin: dict = Depends(require_admin)):
     if not re.match(r"^https?://", url):
         raise HTTPException(status_code=400, detail="Enter a valid RSS feed URL (http/https)")
     try:
-        async with httpx.AsyncClient(timeout=60, headers=UA) as c:
-            r = await c.get(url, follow_redirects=True)
+        r = await safe_get(url, max_bytes=MAX_FEED_BYTES, headers=UA, timeout=60)
         r.raise_for_status()
         items = parse_feed(r.content)
-    except (httpx.HTTPError, ET.ParseError) as e:
+    except (httpx.HTTPError, ET.ParseError, DefusedXmlException) as e:
         raise HTTPException(status_code=400, detail=f"Could not read the feed: {str(e)[:300]}")
     await db.settings.update_one({"id": "app"}, {"$set": {"rss_feed_url": url}}, upsert=True)
     imported_guids = set(await db.episodes.distinct("rss_guid"))
@@ -139,10 +144,10 @@ async def fetch_feed(body: FetchIn, admin: dict = Depends(require_admin)):
     return {"total": len(items), "added": added}
 
 
-async def _analyze_one(item: dict, settings: dict, provider: str, client: httpx.AsyncClient):
+async def _analyze_one(item: dict, settings: dict, provider: str):
     content, source = "", "description"
     if item.get("transcripts"):
-        content = await fetch_transcript(client, item["transcripts"])
+        content = await fetch_transcript(item["transcripts"])
         if content:
             source = "transcript"
     if not content:
@@ -164,26 +169,26 @@ async def _run_analysis(ids: list, provider: str):
     settings = await llm.get_settings()
     sem = asyncio.Semaphore(CONCURRENCY)
     abort = {"msg": None}
-    async with httpx.AsyncClient(timeout=60, headers=UA) as client:
-        async def work(item_id):
-            async with sem:
-                if abort["msg"]:
-                    return
-                item = await db.rss_items.find_one({"id": item_id}, NO_ID)
-                if not item:
-                    return
-                try:
-                    content, source, sug = await _analyze_one(item, settings, provider, client)
-                    await db.rss_items.update_one({"id": item_id}, {"$set": {
-                        "content": content, "content_source": source, "suggestion": sug, "status": "review", "error": None}})
-                    await db.rss_jobs.update_one({"id": "current"}, {"$inc": {"done": 1}})
-                except Exception as e:
-                    msg = str(e)
-                    if AUTH_ERROR.search(msg):
-                        abort["msg"] = msg[:300]
-                    await db.rss_items.update_one({"id": item_id}, {"$set": {"error": msg[:300]}})
-                    await db.rss_jobs.update_one({"id": "current"}, {"$inc": {"done": 1, "errors": 1}})
-        await asyncio.gather(*(work(i) for i in ids))
+
+    async def work(item_id):
+        async with sem:
+            if abort["msg"]:
+                return
+            item = await db.rss_items.find_one({"id": item_id}, NO_ID)
+            if not item:
+                return
+            try:
+                content, source, sug = await _analyze_one(item, settings, provider)
+                await db.rss_items.update_one({"id": item_id}, {"$set": {
+                    "content": content, "content_source": source, "suggestion": sug, "status": "review", "error": None}})
+                await db.rss_jobs.update_one({"id": "current"}, {"$inc": {"done": 1}})
+            except Exception as e:
+                msg = str(e)
+                if AUTH_ERROR.search(msg):
+                    abort["msg"] = msg[:300]
+                await db.rss_items.update_one({"id": item_id}, {"$set": {"error": msg[:300]}})
+                await db.rss_jobs.update_one({"id": "current"}, {"$inc": {"done": 1, "errors": 1}})
+    await asyncio.gather(*(work(i) for i in ids))
     await db.rss_jobs.update_one({"id": "current"}, {"$set": {
         "running": False, "finished_at": now_iso(), "aborted": abort["msg"]}})
 
@@ -322,8 +327,7 @@ async def sync_episode_from_feed(ep_id: str, item: dict, user: dict, artwork=Tru
     images = ((ep.get("artwork") or {}).get("images")) or []
     if artwork and url and not any(i.get("source_url") == url for i in images):
         try:
-            async with httpx.AsyncClient(timeout=60, headers=UA) as c:
-                r = await c.get(url, follow_redirects=True)
+            r = await safe_get(url, max_bytes=MAX_IMAGE_BYTES, headers=UA, timeout=60)
             r.raise_for_status()
             if not r.headers.get("content-type", "").startswith("image/"):
                 raise ValueError("not an image")

@@ -17,6 +17,7 @@ from auth import get_current_user
 from bible import BOOKS
 from core import db, now_iso, new_id, NO_ID
 from episodes import _get
+from safe_http import safe_get
 from media import MEDIA_DIR, episode_dir, episode_image_path  # noqa: F401
 
 router = APIRouter(tags=["extras"])
@@ -237,8 +238,9 @@ async def _openai_image(key: str, model: str, prompt: str) -> bytes:
     item = r.json()["data"][0]
     if item.get("b64_json"):
         return base64.b64decode(item["b64_json"])
-    async with httpx.AsyncClient(timeout=60) as c:
-        return (await c.get(item["url"])).content
+    r = await safe_get(item["url"], max_bytes=20 * 1024 * 1024, timeout=60)
+    r.raise_for_status()
+    return r.content
 
 
 async def _gemini_image(key: str, model: str, prompt: str) -> bytes:
