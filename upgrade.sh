@@ -49,7 +49,38 @@ fi
 
 PROFILE=()
 [[ -n "${CLOUDFLARE_TUNNEL_TOKEN:-}" ]] && PROFILE=(--profile tunnel)
+
+# If docker-compose.yml now pins a different network range than the existing network has, Compose rebuilds the
+# network but can leave long-lived containers (e.g. mongo) attached without their DNS names, so the backend
+# cannot find the database. A clean down/up fixes it. "down" keeps all volumes (database, media); never add -v.
+migrate_network_if_needed() {
+  local project wanted existing
+  project=$(docker compose --profile tunnel config 2>/dev/null | sed -n 's/^name: *//;T;p;q' || true)
+  project="${project:-$(basename "$APP_DIR" | tr '[:upper:]' '[:lower:]')}"
+  wanted=$(docker compose --profile tunnel config 2>/dev/null | sed -n 's/.*subnet: *//;T;p;q' || true)
+  [[ -n "$wanted" ]] || return 0
+  existing=$(docker network inspect "${project}_default" -f '{{range .IPAM.Config}}{{.Subnet}} {{end}}' 2>/dev/null || true)
+  [[ -n "$existing" ]] || return 0
+  if [[ " $existing " != *" $wanted "* ]]; then
+    say "Docker network range is changing ($existing→ $wanted). Recreating the containers (your data is kept)…"
+    docker compose --profile tunnel down --remove-orphans
+  fi
+}
+migrate_network_if_needed
+
 say "Rebuilding and restarting…"
 docker compose "${PROFILE[@]}" up -d --build --remove-orphans
 docker image prune -f >/dev/null 2>&1 || true
-ok "Podcast Producer is running version $NEW"
+
+say "Waiting for the app to answer…"
+HEALTHY=0
+for _ in $(seq 1 30); do
+  if curl -fsS -o /dev/null "http://127.0.0.1:${APP_PORT:-8080}/api/health" 2>/dev/null; then HEALTHY=1; break; fi
+  sleep 2
+done
+if [[ $HEALTHY -eq 1 ]]; then
+  ok "Podcast Producer is running version $NEW"
+else
+  printf '\033[1;31m✖ The app did not answer within a minute.\033[0m Check: cd %s && sudo docker compose logs --tail 60 backend\n' "$APP_DIR" >&2
+  exit 1
+fi
