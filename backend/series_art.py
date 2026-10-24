@@ -1,5 +1,4 @@
 import logging
-import re
 import shutil
 from typing import Optional
 
@@ -11,19 +10,15 @@ import llm
 from auth import get_current_user
 from bible import BOOKS
 from core import db, now_iso, new_id, NO_ID
-from extras import MEDIA_DIR, OLD_TESTAMENT, _gemini_image, _openai_image, _parse_json, _sniff, _spawn
+from media import series_dir, series_image_path, episode_image_path
+from extras import OLD_TESTAMENT, _gemini_image, _openai_image, _parse_json, _sniff, _spawn
 
 router = APIRouter(prefix="/series", tags=["series"])
 log = logging.getLogger(__name__)
-UUID_RX = r"[0-9a-f-]{36}"
 MAX_UPLOAD = 10 * 1024 * 1024
 EP_FIELDS = {"_id": 0, "id": 1, "title": 1, "episode_number": 1, "status": 1, "topic": 1, "primary_scripture": 1,
              "themes": 1, "books": 1, "chapters": 1, "published_at": 1, "artwork.images": 1,
              "artwork.selected_image_id": 1}
-
-
-def _folder(series_id: str):
-    return MEDIA_DIR / "series" / series_id
 
 
 def _art(s: dict) -> dict:
@@ -70,8 +65,8 @@ async def _add_image(series_id: str, data: bytes, meta: dict) -> str:
     s = await _get_series(series_id)
     art = _art(s)
     img_id = new_id()
-    _folder(series_id).mkdir(parents=True, exist_ok=True)
-    (_folder(series_id) / f"{img_id}.png").write_bytes(data)
+    series_dir(series_id).mkdir(parents=True, exist_ok=True)
+    series_image_path(series_id, img_id).write_bytes(data)
     img = {"id": img_id, "concept_id": None, "created_at": now_iso(), **meta}
     await db.series.update_one({"id": series_id}, {"$set": {
         "artwork": {**art, "images": art["images"] + [img], "selected_image_id": art["selected_image_id"] or img_id},
@@ -95,9 +90,7 @@ class FromEpisodeIn(BaseModel):
 
 @router.post("/{series_id}/artwork/from-episode")
 async def cover_from_episode(series_id: str, body: FromEpisodeIn, user: dict = Depends(get_current_user)):
-    if not re.fullmatch(UUID_RX, body.episode_id) or not re.fullmatch(UUID_RX, body.image_id):
-        raise HTTPException(status_code=404, detail="Image not found")
-    src = MEDIA_DIR / body.episode_id / f"{body.image_id}.png"
+    src = episode_image_path(body.episode_id, body.image_id)
     if not src.exists():
         raise HTTPException(status_code=404, detail="Image not found")
     img_id = await _add_image(series_id, src.read_bytes(), {"prompt": "Copied from an episode", "provider": "episode",
@@ -174,9 +167,7 @@ async def generate(series_id: str, body: GenIn, user: dict = Depends(get_current
 
 @router.get("/{series_id}/artwork/{img_id}.png")
 async def image_file(series_id: str, img_id: str, _: dict = Depends(get_current_user)):
-    if not re.fullmatch(UUID_RX, series_id) or not re.fullmatch(UUID_RX, img_id):
-        raise HTTPException(status_code=404, detail="Not found")
-    path = _folder(series_id) / f"{img_id}.png"
+    path = series_image_path(series_id, img_id)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
     return FileResponse(path, media_type=_sniff(path), headers={"Cache-Control": "private, max-age=86400"})
@@ -197,12 +188,12 @@ async def delete_image(series_id: str, img_id: str, _: dict = Depends(get_curren
     images = [i for i in art["images"] if i["id"] != img_id]
     if len(images) == len(art["images"]):
         raise HTTPException(status_code=404, detail="Image not found")
-    (_folder(series_id) / f"{img_id}.png").unlink(missing_ok=True)
+    series_image_path(series_id, img_id).unlink(missing_ok=True)
     sel = art["selected_image_id"] if art["selected_image_id"] != img_id else (images[-1]["id"] if images else None)
     await db.series.update_one({"id": series_id}, {"$set": {"artwork": {**art, "images": images, "selected_image_id": sel}}})
     return await _detail(series_id)
 
 
 def remove_series_media(series_id: str):
-    shutil.rmtree(_folder(series_id), ignore_errors=True)
+    shutil.rmtree(series_dir(series_id), ignore_errors=True)
 

@@ -12,7 +12,7 @@ from starlette.background import BackgroundTask
 
 from auth import require_admin, set_auth_cookies, user_doc
 from core import db, now_iso
-from extras import MEDIA_DIR
+from media import MEDIA_DIR
 
 router = APIRouter(tags=["setup"])
 COLLECTIONS = ["users", "episodes", "documents", "settings", "series", "plan_items", "rss_items", "coverage_suggestions"]
