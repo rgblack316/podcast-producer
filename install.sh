@@ -75,13 +75,12 @@ ok "Port set to $PORT"
 if [[ -n "${CLOUDFLARE_TUNNEL_TOKEN:-}" ]]; then TUNNEL="$CLOUDFLARE_TUNNEL_TOKEN"
 else ask TUNNEL "Cloudflare Tunnel token (optional - press Enter to skip and add it later):" ""; fi
 
+# auto = login cookies are marked Secure only for HTTPS requests (via the tunnel), so plain-http LAN sign-in also works
+SECURE=auto
 if [[ -n "$TUNNEL" ]]; then
-  SECURE=true
   ok "Cloudflare Tunnel will be started"
 else
-  ask HTTPS "Will people reach the app over HTTPS (Cloudflare Tunnel or another proxy)? (y/n)" y
-  if [[ "$HTTPS" =~ ^[Nn] ]]; then SECURE=false; else SECURE=true; fi
-  ok "HTTPS cookies: $SECURE"
+  ok "Login cookies: Secure over HTTPS, plain over http (auto)"
 fi
 [[ $TTY_OK -eq 1 ]] && exec 3<&-
 SETUP_TOKEN=$(openssl rand -hex 16)
@@ -115,7 +114,7 @@ ok "Podcast Producer is running!"
 echo "  Local address : http://${IP:-localhost}:$PORT"
 [[ -n "$TUNNEL" ]] && echo "  Public address: your Cloudflare Tunnel hostname (route it to http://frontend:80)"
 echo "  Setup token   : $SETUP_TOKEN   (needed once in the first-run setup wizard; also saved in $INSTALL_DIR/.env)"
-if [[ "$SECURE" == "true" && -z "$TUNNEL" ]]; then
-  echo "  Note: sign-in needs HTTPS (or http://localhost). For plain-http LAN use set COOKIE_SECURE=false in .env and run the upgrade."
+if [[ -z "$TUNNEL" ]]; then
+  echo "  Note: over plain http on your LAN the login cookie is not marked Secure. Use a Cloudflare Tunnel (HTTPS) for outside access."
 fi
 echo "  Upgrade later : sudo podcast-producer-upgrade"

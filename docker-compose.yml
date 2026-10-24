@@ -18,7 +18,7 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_FORCE_RESET: ${ADMIN_FORCE_RESET:-false}
-      COOKIE_SECURE: ${COOKIE_SECURE}
+      COOKIE_SECURE: ${COOKIE_SECURE:-auto}
       CORS_ORIGINS: ""
       MEDIA_DIR: /data/media
     volumes:
