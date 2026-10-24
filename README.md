@@ -4,7 +4,7 @@ A private, self-hosted studio for planning, writing and tracking episodes of the
 
 You enter an episode's topic, title and scripture. The AI writes an outline that follows your planning template. You approve the outline, and the AI writes the full script. Show notes, social posts and cover art can follow from there. Every episode, new or imported from your RSS feed, is kept in a searchable library. The library tracks books of the Bible, themes, series and your publishing schedule.
 
-Everything runs on your own server with Docker. The app calls **Google Gemini** or **OpenAI** directly with **your own API keys**. No Emergent services are used at runtime.
+Everything runs on your own server with Docker. The app calls **Google Gemini** or **OpenAI** directly with **your own API keys**.
 
 ---
 
