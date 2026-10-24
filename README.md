@@ -120,7 +120,7 @@ Extra hardening (optional):
 |---|---|
 | `DB_NAME` | MongoDB database name (default `biblebytes`) |
 | `JWT_SECRET` | Long random string used to sign login tokens (`openssl rand -hex 32`) |
-| `SETUP_TOKEN` | Required to complete the first-run wizard, so strangers can't claim the admin account |
+| `SETUP_TOKEN` | Required to complete the first-run wizard, so strangers can't claim the admin account. If it is empty, setup is locked and cannot be completed. Wrong guesses are rate-limited |
 | `COOKIE_SECURE` | `true` when accessed over HTTPS (tunnel). `false` only for plain-http LAN use |
 | `APP_PORT` | Port on the server where the web app is published (default `8080`) |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Optional tunnel token. When set, the `cloudflared` container runs |

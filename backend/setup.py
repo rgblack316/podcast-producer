@@ -1,8 +1,10 @@
+import hmac
 import io
 import json
 import os
 import tempfile
 import zipfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
@@ -17,21 +19,43 @@ from media import MEDIA_DIR
 router = APIRouter(tags=["setup"])
 COLLECTIONS = ["users", "episodes", "documents", "settings", "series", "plan_items", "rss_items", "coverage_suggestions"]
 APP_ID = "bible-bytes-producer"
+SETUP_MAX_FAILS = 10          # wrong tokens allowed per window, per source address and overall
+SETUP_LOCKOUT_MINUTES = 15
 
 
 async def needs_setup() -> bool:
     return await db.users.count_documents({}) == 0
 
 
-def _check_token(token: str):
+async def _check_token(token: str, request: Request):
+    """Setup needs the server's SETUP_TOKEN. With no token configured setup is disabled, never open."""
     expected = os.environ.get("SETUP_TOKEN", "")
-    if expected and token != expected:
-        raise HTTPException(status_code=403, detail="Invalid setup token")
+    if not expected:
+        raise HTTPException(status_code=503, detail="Setup is locked: add SETUP_TOKEN to the server's .env file and restart.")
+    # Per-address and overall counters (the overall one still holds if an address were ever spoofed).
+    ids = [f"setup:{request.client.host if request.client else 'unknown'}", "setup:all"]
+    now = datetime.now(timezone.utc)
+    for ident in ids:
+        row = await db.login_attempts.find_one({"identifier": ident}, {"_id": 0})
+        if row and row.get("locked_until") and row["locked_until"] > now.isoformat():
+            raise HTTPException(status_code=429, detail="Too many wrong setup tokens. Try again in 15 minutes.")
+    if hmac.compare_digest(token.encode(), expected.encode()):
+        return
+    for ident in ids:
+        row = await db.login_attempts.find_one({"identifier": ident}, {"_id": 0})
+        count = (row or {}).get("count", 0) + 1
+        update = {"identifier": ident, "count": count, "updated_at": now_iso()}
+        if count >= SETUP_MAX_FAILS:
+            update["locked_until"] = (now + timedelta(minutes=SETUP_LOCKOUT_MINUTES)).isoformat()
+            update["count"] = 0
+        await db.login_attempts.update_one({"identifier": ident}, {"$set": update}, upsert=True)
+    raise HTTPException(status_code=403, detail="Invalid setup token")
 
 
 @router.get("/setup/status")
 async def setup_status():
-    return {"needs_setup": await needs_setup(), "token_required": bool(os.environ.get("SETUP_TOKEN"))}
+    return {"needs_setup": await needs_setup(), "token_required": True,
+            "setup_disabled": not os.environ.get("SETUP_TOKEN")}
 
 
 class AdminIn(BaseModel):
@@ -62,8 +86,8 @@ class SetupIn(BaseModel):
 
 
 @router.post("/setup")
-async def run_setup(body: SetupIn, response: Response):
-    _check_token(body.setup_token)
+async def run_setup(body: SetupIn, request: Request, response: Response):
+    await _check_token(body.setup_token, request)
     if not await needs_setup():
         raise HTTPException(status_code=409, detail="Setup has already been completed")
     admin = user_doc(body.admin.username, body.admin.name or body.admin.username, body.admin.password, "admin")
@@ -140,8 +164,8 @@ async def restore_zip(raw: bytes) -> dict:
 
 
 @router.post("/setup/restore")
-async def setup_restore(file: UploadFile = File(...), setup_token: str = Form("")):
-    _check_token(setup_token)
+async def setup_restore(request: Request, file: UploadFile = File(...), setup_token: str = Form("")):
+    await _check_token(setup_token, request)
     if not await needs_setup():
         raise HTTPException(status_code=409, detail="Setup has already been completed")
     return await restore_zip(await file.read())
