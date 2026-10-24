@@ -38,12 +38,17 @@ def _token(user_id: str, kind: str, delta: timedelta) -> str:
     return jwt.encode(payload, _secret(), algorithm=JWT_ALGORITHM)
 
 
-def _cookie_secure() -> bool:
-    return os.environ.get("COOKIE_SECURE", "true").lower() == "true"
+def _cookie_secure(request: Request) -> bool:
+    """COOKIE_SECURE: "true"/"false" force the flag; "auto" (default in compose) marks cookies Secure only when
+    the request itself was HTTPS (nginx reports that only for requests arriving through the trusted tunnel)."""
+    mode = os.environ.get("COOKIE_SECURE", "true").lower()
+    if mode == "auto":
+        return request.url.scheme == "https"
+    return mode == "true"
 
 
-def set_auth_cookies(response: Response, user_id: str):
-    opts = dict(httponly=True, secure=_cookie_secure(), samesite="lax", path="/")
+def set_auth_cookies(response: Response, user_id: str, request: Request):
+    opts = dict(httponly=True, secure=_cookie_secure(request), samesite="lax", path="/")
     response.set_cookie("access_token", _token(user_id, "access", timedelta(minutes=ACCESS_MINUTES)),
                         max_age=ACCESS_MINUTES * 60, **opts)
     response.set_cookie("refresh_token", _token(user_id, "refresh", timedelta(days=REFRESH_DAYS)),
@@ -130,7 +135,7 @@ async def login(body: LoginIn, request: Request, response: Response):
     await db.login_attempts.delete_many({"identifier": {"$in": [identifier, user_identifier]}})
     # MFA hook: when user["mfa_enabled"] is true, a TOTP challenge step will be inserted here (Phase 2).
     await db.users.update_one({"id": user["id"]}, {"$set": {"last_login_at": now_iso()}})
-    set_auth_cookies(response, user["id"])
+    set_auth_cookies(response, user["id"], request)
     return await db.users.find_one({"id": user["id"]}, USER_PUBLIC)
 
 
@@ -142,7 +147,7 @@ async def refresh(request: Request, response: Response):
     user = await db.users.find_one({"id": _decode(token, "refresh")}, USER_PUBLIC)
     if not user or not user.get("active", True):
         raise HTTPException(status_code=401, detail="User not found or inactive")
-    set_auth_cookies(response, user["id"])
+    set_auth_cookies(response, user["id"], request)
     return user
 
 

@@ -121,7 +121,7 @@ Extra hardening (optional):
 | `DB_NAME` | MongoDB database name (default `biblebytes`) |
 | `JWT_SECRET` | Long random string used to sign login tokens (`openssl rand -hex 32`) |
 | `SETUP_TOKEN` | Required to complete the first-run wizard, so strangers can't claim the admin account. If it is empty, setup is locked and cannot be completed. Wrong guesses are rate-limited |
-| `COOKIE_SECURE` | `true` when accessed over HTTPS (tunnel). `false` only for plain-http LAN use |
+| `COOKIE_SECURE` | `auto` (default): login cookies are marked Secure only for HTTPS requests that arrive through the bundled tunnel, so both the tunnel and plain-http LAN sign-in work. `true` forces Secure (LAN http sign-in then fails); `false` never sets it |
 | `APP_PORT` | Port on the server where the web app is published (default `8080`) |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Optional tunnel token. When set, the `cloudflared` container runs |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_FORCE_RESET` | **Recovery only.** Leave them blank normally (see [Troubleshooting](#troubleshooting)) |
@@ -204,7 +204,7 @@ If you use the tunnel, add `--profile tunnel` to `up`/`down`, or simply use the 
 ## Troubleshooting
 | Problem | Fix |
 |---|---|
-| Login works on `localhost` but not over plain `http://<ip>` | Browsers reject secure cookies over http. Use the tunnel (HTTPS), or set `COOKIE_SECURE=false` and run the upgrade script. |
+| Login works on `localhost` or the tunnel but loops back to the login page on plain `http://<ip>` | `.env` has `COOKIE_SECURE=true`, and browsers reject Secure cookies over http. Set `COOKIE_SECURE=auto` and run the upgrade script. |
 | "API key not valid" during generation or RSS analysis | Re-enter the key in **Settings → AI** and click **Test connection**. |
 | Lost the admin password | In `.env`, set `ADMIN_USERNAME=<admin>`, `ADMIN_PASSWORD=<new>` and `ADMIN_FORCE_RESET=true`. Run `sudo podcast-producer-upgrade`, sign in, then clear those three values and run the upgrade again. |
 | Installer was interrupted (closed terminal, build error) | Run the same `curl … | sudo bash` command again. If no `.env` exists yet, it updates the download and continues the install; once `.env` exists, use `sudo /opt/podcast-producer/upgrade.sh` instead. |
