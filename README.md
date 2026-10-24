@@ -74,11 +74,16 @@ curl -fsSL https://raw.githubusercontent.com/rgblack316/podcast-producer/main/in
 sudo podcast-producer-upgrade          # same as: sudo /opt/podcast-producer/upgrade.sh
 ```
 The upgrade script:
-1. Saves a **pre-upgrade backup** to `/opt/podcast-producer/backups/` (database archive plus artwork `.tgz`). It keeps the last 10.
-2. Fetches the latest code and **resets tracked files to GitHub**. Local edits to app files are discarded. `.env`, `backups/` and all data in Docker volumes are never touched.
-3. Rebuilds and restarts the containers, then prunes old images.
+1. Fetches the latest code and **shows you what is changing** (commit list, files, and a warning when files that control what runs on the server, such as `Dockerfile`s, `docker-compose.yml`, `nginx.conf` or dependency lists, changed). In a terminal it asks before going on. It refuses to continue if GitHub's history was rewritten.
+2. Saves a **pre-upgrade backup** to `/opt/podcast-producer/backups/` (database archive plus artwork `.tgz`). It keeps the last 10.
+3. **Resets tracked files to GitHub**. Local edits to app files are discarded. `.env`, `backups/` and all data in Docker volumes are never touched.
+4. Rebuilds and restarts the containers, then prunes old images.
 
-Options: `BRANCH=main`, `SKIP_BACKUP=1`, `KEEP_BACKUPS=10`, `FORCE_REBUILD=1`.
+Options: `BRANCH=main`, `REF=<commit or tag>` (upgrade to exactly that version), `YES=1` (don't ask), `SKIP_BACKUP=1`, `KEEP_BACKUPS=10`, `FORCE_REBUILD=1`, `ALLOW_REWRITE=1`.
+
+**Keep the GitHub account safe.** Upgrades build and run whatever is on the `main` branch as root, so whoever can push to it controls the server. Use two-factor authentication on the GitHub account, and consider a branch protection rule on `main` (require a pull request before merging).
+
+**Installing without piping into a shell:** download first and read it, then run it: `curl -fsSLO https://raw.githubusercontent.com/rgblack316/podcast-producer/main/install.sh && less install.sh && sudo bash install.sh`.
 
 ---
 
