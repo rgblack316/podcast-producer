@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -20,7 +21,14 @@ from series_art import router as series_art_router  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
-app = FastAPI(title="Bible Bytes Producer")
+@asynccontextmanager
+async def lifespan(_app):
+    await startup()
+    yield
+    await shutdown()
+
+
+app = FastAPI(title="Bible Bytes Producer", lifespan=lifespan)
 api = APIRouter(prefix="/api")
 
 
@@ -39,7 +47,6 @@ if origins:
                        allow_methods=["*"], allow_headers=["*"])
 
 
-@app.on_event("startup")
 async def startup():
     await db.users.create_index("username", unique=True)
     await db.users.create_index("id", unique=True)
@@ -67,6 +74,5 @@ async def startup():
     await seed_admin()
 
 
-@app.on_event("shutdown")
 async def shutdown():
     client.close()
