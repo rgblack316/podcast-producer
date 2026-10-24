@@ -47,6 +47,13 @@ async def startup():
     await db.episodes.create_index([("created_at", -1)])
     await db.documents.create_index("id", unique=True)
     await db.login_attempts.create_index("identifier")
+    # Encrypt any AI keys saved before encryption existed
+    from secrets_box import KEY_FIELDS, encrypt
+    cur = await db.settings.find_one({"id": "app"}, {"_id": 0})
+    if cur:
+        fix = {k: encrypt(cur[k]) for k in KEY_FIELDS if cur.get(k) and not cur[k].startswith("enc1:")}
+        if fix:
+            await db.settings.update_one({"id": "app"}, {"$set": fix})
     await db.ai_events.create_index("user_id")
     await db.ai_events.create_index("at", expireAfterSeconds=3600)
     await db.revoked_tokens.create_index("jti", unique=True)

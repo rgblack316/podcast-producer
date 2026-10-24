@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 import llm
+from secrets_box import KEY_FIELDS, encrypt
 import prompts
 from auth import get_current_user, require_admin
 from core import db, now_iso, new_id, NO_ID
@@ -71,6 +72,9 @@ async def update_settings(body: SettingsIn, admin: dict = Depends(require_admin)
         raise HTTPException(status_code=400, detail="Provider must be gemini or openai")
     if "image_provider" in changes and changes["image_provider"] not in ("gemini", "openai"):
         raise HTTPException(status_code=400, detail="Image provider must be gemini or openai")
+    for k in KEY_FIELDS:
+        if k in changes:
+            changes[k] = encrypt(changes[k])
     changes.update({"updated_at": now_iso(), "updated_by": admin["username"]})
     await db.settings.update_one({"id": "app"}, {"$set": changes}, upsert=True)
     return await get_settings(admin)

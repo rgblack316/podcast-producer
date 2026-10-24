@@ -2,6 +2,7 @@ import httpx
 from fastapi import HTTPException
 
 from core import db, NO_ID
+from secrets_box import KEY_FIELDS, decrypt
 
 DEFAULT_SETTINGS = {
     "id": "app",
@@ -25,7 +26,10 @@ TIMEOUT = httpx.Timeout(600.0, connect=20.0)
 
 async def get_settings() -> dict:
     doc = await db.settings.find_one({"id": "app"}, NO_ID)
-    return {**DEFAULT_SETTINGS, **(doc or {})}
+    merged = {**DEFAULT_SETTINGS, **(doc or {})}
+    for k in KEY_FIELDS:
+        merged[k] = decrypt(merged.get(k, ""))
+    return merged
 
 
 async def _openai(key: str, model: str, system: str, prompt: str) -> str:
