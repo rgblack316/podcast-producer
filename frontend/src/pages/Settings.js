@@ -3,6 +3,7 @@ import { AiSettings } from "@/components/settings/AiSettings";
 import { DocumentsSettings } from "@/components/settings/DocumentsSettings";
 import { UsersSettings } from "@/components/settings/UsersSettings";
 import { BackupSettings } from "@/components/settings/BackupSettings";
+import { ActivitySettings } from "@/components/settings/ActivitySettings";
 
 export default function Settings() {
   return (
@@ -17,11 +18,13 @@ export default function Settings() {
           <TabsTrigger value="docs" data-testid="settings-tab-docs">Reference documents</TabsTrigger>
           <TabsTrigger value="users" data-testid="settings-tab-users">Users</TabsTrigger>
           <TabsTrigger value="backup" data-testid="settings-tab-backup">Backup</TabsTrigger>
+          <TabsTrigger value="activity" data-testid="settings-tab-activity">Activity</TabsTrigger>
         </TabsList>
         <TabsContent value="ai" className="mt-6"><AiSettings /></TabsContent>
         <TabsContent value="docs" className="mt-6"><DocumentsSettings /></TabsContent>
         <TabsContent value="users" className="mt-6"><UsersSettings /></TabsContent>
         <TabsContent value="backup" className="mt-6"><BackupSettings /></TabsContent>
+        <TabsContent value="activity" className="mt-6"><ActivitySettings /></TabsContent>
       </Tabs>
     </div>
   );

@@ -48,6 +48,10 @@ if origins:
 
 
 async def startup():
+    if len(os.environ.get("JWT_SECRET", "")) < 32:
+        logging.getLogger("startup").warning(
+            "JWT_SECRET is shorter than 32 characters, which makes login tokens easier to forge. "
+            "Replace it with a long random value (e.g. `openssl rand -hex 32`); everyone will need to sign in again.")
     await db.users.create_index("username", unique=True)
     await db.users.create_index("id", unique=True)
     await db.episodes.create_index("id", unique=True)
@@ -61,6 +65,10 @@ async def startup():
         fix = {k: encrypt(cur[k]) for k in KEY_FIELDS if cur.get(k) and not cur[k].startswith("enc1:")}
         if fix:
             await db.settings.update_one({"id": "app"}, {"$set": fix})
+    await db.login_attempts.create_index("at", expireAfterSeconds=86400)
+    await db.login_attempts.delete_many({"at": {"$exists": False}})  # old rows that would never expire
+    from audit import retention_seconds
+    await db.audit_log.create_index("at", expireAfterSeconds=retention_seconds())
     await db.ai_events.create_index("user_id")
     await db.ai_events.create_index("at", expireAfterSeconds=3600)
     await db.revoked_tokens.create_index("jti", unique=True)

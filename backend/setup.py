@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
+from audit import audit
 from auth import require_admin, set_auth_cookies, user_doc
 from core import db, now_iso
 from media import MEDIA_DIR
@@ -44,7 +45,7 @@ async def _check_token(token: str, request: Request):
     for ident in ids:
         row = await db.login_attempts.find_one({"identifier": ident}, {"_id": 0})
         count = (row or {}).get("count", 0) + 1
-        update = {"identifier": ident, "count": count, "updated_at": now_iso()}
+        update = {"identifier": ident, "count": count, "updated_at": now_iso(), "at": now}
         if count >= SETUP_MAX_FAILS:
             update["locked_until"] = (now + timedelta(minutes=SETUP_LOCKOUT_MINUTES)).isoformat()
             update["count"] = 0
@@ -99,6 +100,7 @@ async def run_setup(body: SetupIn, request: Request, response: Response):
             settings[k] = encrypt(getattr(body.ai, k).strip())
     await db.settings.update_one({"id": "app"}, {"$set": settings}, upsert=True)
     set_auth_cookies(response, admin, request)
+    await audit(request, "setup_completed", actor=admin)
     return {k: v for k, v in admin.items() if k not in ("_id", "password_hash", "mfa_secret")}
 
 
@@ -138,7 +140,8 @@ def _write_zip(path: str, data: dict):
 
 
 @router.get("/backup")
-async def download_backup(_: dict = Depends(require_admin)):
+async def download_backup(request: Request, admin: dict = Depends(require_admin)):
+    await audit(request, "backup_download", actor=admin)
     data = {c: await db[c].find({}, {"_id": 0}).to_list(None) for c in COLLECTIONS}
     fd, path = tempfile.mkstemp(suffix=".zip")
     os.close(fd)
@@ -264,13 +267,16 @@ async def setup_restore(request: Request, file: UploadFile = File(...), setup_to
     await _check_token(setup_token, request)
     if not await needs_setup():
         raise HTTPException(status_code=409, detail="Setup has already been completed")
-    return await restore_zip(file)
+    result = await restore_zip(file)
+    await audit(request, "setup_restore")
+    return result
 
 
 @router.post("/backup/restore")
 async def admin_restore(request: Request, response: Response, file: UploadFile = File(...),
-                        _: dict = Depends(require_admin)):
+                        admin: dict = Depends(require_admin)):
     result = await restore_zip(file)
+    await audit(request, "backup_restored", actor=admin)
     response.delete_cookie("access_token", path="/")
     response.delete_cookie("refresh_token", path="/")
     return result

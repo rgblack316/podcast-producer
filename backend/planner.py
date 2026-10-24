@@ -1,9 +1,10 @@
 import re
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from audit import audit
 from auth import get_current_user, require_admin
 from core import db, now_iso, new_id, NO_ID
 
@@ -45,10 +46,11 @@ async def update_series(series_id: str, body: SeriesIn, _: dict = Depends(get_cu
 
 
 @router.delete("/series/{series_id}")
-async def delete_series(series_id: str, _: dict = Depends(require_admin)):
+async def delete_series(series_id: str, request: Request, admin: dict = Depends(require_admin)):
     res = await db.series.delete_one({"id": series_id})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Series not found")
+    await audit(request, "series_deleted", actor=admin, target=series_id)
     from series_art import remove_series_media
     remove_series_media(series_id)
     # past episodes added only for grouping have no other purpose on the plan; drop those, keep real plans

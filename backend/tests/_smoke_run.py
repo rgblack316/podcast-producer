@@ -39,6 +39,12 @@ def run(client):
     assert client.post("/api/auth/login", json={"username": "admin", "password": "bad"}).status_code == 401
     assert client.post("/api/auth/login", json={"username": "admin", "password": "correct horse 1"}).status_code == 200
     assert client.get("/api/auth/me").status_code == 200
+    # audit trail recorded the events, without secrets
+    rows = client.get("/api/settings/audit").json()
+    actions = [r["action"] for r in rows]
+    for a in ("setup_completed", "backup_download", "logout", "login_failed", "login"):
+        assert a in actions, (a, actions)
+    assert "correct horse" not in str(rows) and "gk-secret" not in str(rows)
 
 
 with TestClient(server.app) as c:
