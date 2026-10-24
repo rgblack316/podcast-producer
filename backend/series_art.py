@@ -10,7 +10,8 @@ import llm
 from auth import get_current_user
 from bible import BOOKS
 from core import db, now_iso, new_id, NO_ID
-from media import series_dir, series_image_path, episode_image_path
+from ratelimit import ai_rate_limit
+from media import is_image, series_dir, series_image_path, episode_image_path
 from extras import OLD_TESTAMENT, _gemini_image, _openai_image, _parse_json, _sniff, _spawn
 
 router = APIRouter(prefix="/series", tags=["series"])
@@ -77,7 +78,7 @@ async def _add_image(series_id: str, data: bytes, meta: dict) -> str:
 @router.post("/{series_id}/artwork/upload")
 async def upload_cover(series_id: str, file: UploadFile = File(...), user: dict = Depends(get_current_user)):
     data = await file.read()
-    if not (file.content_type or "").startswith("image/") or len(data) > MAX_UPLOAD:
+    if len(data) > MAX_UPLOAD or not is_image(data):
         raise HTTPException(status_code=400, detail="Upload a PNG, JPG or WebP image up to 10 MB")
     await _add_image(series_id, data, {"prompt": f"Uploaded: {file.filename}", "provider": "upload", "created_by": user["username"]})
     return await _detail(series_id)
@@ -105,7 +106,7 @@ class BrainstormIn(BaseModel):
 
 
 @router.post("/{series_id}/artwork/brainstorm")
-async def brainstorm(series_id: str, body: BrainstormIn, user: dict = Depends(get_current_user)):
+async def brainstorm(series_id: str, body: BrainstormIn, user: dict = Depends(ai_rate_limit)):
     d = await _detail(series_id)
     art = d["artwork"]
     settings = await llm.get_settings()
@@ -151,7 +152,7 @@ async def _run(series_id: str, provider: str, prompt: str, user: dict):
 
 
 @router.post("/{series_id}/artwork/generate")
-async def generate(series_id: str, body: GenIn, user: dict = Depends(get_current_user)):
+async def generate(series_id: str, body: GenIn, user: dict = Depends(ai_rate_limit)):
     s = await _get_series(series_id)
     if not body.prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt is empty")

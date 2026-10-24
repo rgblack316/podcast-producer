@@ -13,6 +13,7 @@ from auth import get_current_user, require_admin
 from bible import BOOKS, books_in, chapter_keys, parse_refs
 from core import db, now_iso, new_id, NO_ID
 from docx_utils import markdown_to_docx
+from ratelimit import ai_rate_limit
 
 router = APIRouter(prefix="/episodes", tags=["episodes"])
 log = logging.getLogger(__name__)
@@ -245,7 +246,7 @@ async def _run_generation(ep_id: str, stage: str, provider: str, notes: str, use
 
 
 @router.post("/{ep_id}/{stage}/generate")
-async def generate(ep_id: str, stage: str, body: GenerateIn, user: dict = Depends(get_current_user)):
+async def generate(ep_id: str, stage: str, body: GenerateIn, user: dict = Depends(ai_rate_limit)):
     ep = await _get(ep_id)
     _check_editable(ep, stage)
     if ep.get("generating"):

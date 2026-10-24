@@ -18,6 +18,7 @@ import prompts
 from auth import require_admin
 from core import db, now_iso, new_id, NO_ID
 from episodes import new_episode
+from media import is_image
 from safe_http import safe_get
 
 router = APIRouter(prefix="/rss", tags=["rss"])
@@ -329,8 +330,8 @@ async def sync_episode_from_feed(ep_id: str, item: dict, user: dict, artwork=Tru
         try:
             r = await safe_get(url, max_bytes=MAX_IMAGE_BYTES, headers=UA, timeout=60)
             r.raise_for_status()
-            if not r.headers.get("content-type", "").startswith("image/"):
-                raise ValueError("not an image")
+            if not is_image(r.content):
+                raise ValueError("not a PNG, JPEG or WebP image")
             await save_image_bytes(ep_id, r.content, {"prompt": "Imported from RSS feed", "provider": "rss",
                                                       "source_url": url, "created_by": user["username"]})
             result["artwork"] = True

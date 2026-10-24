@@ -4,7 +4,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from auth import get_current_user
+from auth import get_current_user, require_admin
 from core import db, now_iso, new_id, NO_ID
 
 router = APIRouter(tags=["planner"])
@@ -45,7 +45,7 @@ async def update_series(series_id: str, body: SeriesIn, _: dict = Depends(get_cu
 
 
 @router.delete("/series/{series_id}")
-async def delete_series(series_id: str, _: dict = Depends(get_current_user)):
+async def delete_series(series_id: str, _: dict = Depends(require_admin)):
     res = await db.series.delete_one({"id": series_id})
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Series not found")

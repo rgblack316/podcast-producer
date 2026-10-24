@@ -17,6 +17,7 @@ from auth import get_current_user
 from bible import BOOKS
 from core import db, now_iso, new_id, NO_ID
 from episodes import _get
+from ratelimit import ai_rate_limit
 from safe_http import safe_get
 from media import MEDIA_DIR, episode_dir, episode_image_path  # noqa: F401
 
@@ -83,7 +84,7 @@ async def _run_assets(ep_id: str, provider: str, notes: str, user: dict):
 
 
 @router.post("/episodes/{ep_id}/assets/generate")
-async def generate_assets(ep_id: str, body: AssetsGenIn, user: dict = Depends(get_current_user)):
+async def generate_assets(ep_id: str, body: AssetsGenIn, user: dict = Depends(ai_rate_limit)):
     ep = await _get(ep_id)
     if ep["status"] not in ("script_complete", "published"):
         raise HTTPException(status_code=400, detail="Mark the script complete before creating show notes")
@@ -143,7 +144,7 @@ class SuggestIn(BaseModel):
 
 
 @router.post("/coverage/suggest")
-async def suggest_topics(body: SuggestIn, user: dict = Depends(get_current_user)):
+async def suggest_topics(body: SuggestIn, user: dict = Depends(ai_rate_limit)):
     settings = await llm.get_settings()
     provider = llm.resolve_provider(settings, body.provider)
     cov = await coverage(user)
@@ -192,7 +193,7 @@ def _artwork(ep: dict) -> dict:
 
 
 @router.post("/episodes/{ep_id}/artwork/brainstorm")
-async def brainstorm(ep_id: str, body: BrainstormIn, user: dict = Depends(get_current_user)):
+async def brainstorm(ep_id: str, body: BrainstormIn, user: dict = Depends(ai_rate_limit)):
     ep = await _get(ep_id)
     art = _artwork(ep)
     settings = await llm.get_settings()
@@ -303,7 +304,7 @@ async def _run_image(ep_id: str, provider: str, prompt: str, concept_id: str | N
 
 
 @router.post("/episodes/{ep_id}/artwork/generate")
-async def generate_artwork(ep_id: str, body: ArtGenIn, user: dict = Depends(get_current_user)):
+async def generate_artwork(ep_id: str, body: ArtGenIn, user: dict = Depends(ai_rate_limit)):
     ep = await _get(ep_id)
     if not body.prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt is empty")
