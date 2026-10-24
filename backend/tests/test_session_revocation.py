@@ -14,6 +14,7 @@ os.environ["COOKIE_SECURE"] = "false"
 from fastapi import HTTPException, Response  # noqa: E402
 from starlette.requests import Request  # noqa: E402
 
+import audit as audit_mod  # noqa: E402
 import auth  # noqa: E402
 
 
@@ -74,7 +75,7 @@ class Col:
 
 class DB:
     def __init__(self):
-        self.users, self.login_attempts, self.revoked_tokens = Col(), Col(), Col()
+        self.users, self.login_attempts, self.revoked_tokens, self.audit_log = Col(), Col(), Col(), Col()
 
 
 def req(cookies=None):
@@ -100,6 +101,7 @@ def run(c):
 def world(monkeypatch):
     db = DB()
     monkeypatch.setattr(auth, "db", db)
+    monkeypatch.setattr(audit_mod, "db", db)
     run(db.users.insert_one(auth.user_doc("bob", "Bob", "old-password", "producer")))
     run(db.users.insert_one(auth.user_doc("root", "Root", "root-password", "admin")))
     return db
@@ -162,7 +164,7 @@ def test_changing_own_password_signs_out_other_sessions_but_keeps_this_one(world
 def test_admin_reset_password_signs_the_user_out(world):
     c = login()
     bob_id = world.users.docs[0]["id"]
-    run(auth.reset_password(bob_id, auth.ResetPasswordIn(new_password="reset-pass-1"), {"id": "x"}))
+    run(auth.reset_password(bob_id, auth.ResetPasswordIn(new_password="reset-pass-1"), None, {"id": "x"}))
     assert status_of(me, c) == 401 and status_of(refresh, c) == 401
 
 
@@ -170,9 +172,9 @@ def test_deactivation_kills_tokens_even_after_reactivation(world):
     c = login()
     bob_id = world.users.docs[0]["id"]
     admin = {"id": world.users.docs[1]["id"]}
-    run(auth.update_user(bob_id, auth.UserUpdate(active=False), admin))
+    run(auth.update_user(bob_id, auth.UserUpdate(active=False), None, admin))
     assert status_of(me, c) == 401
-    run(auth.update_user(bob_id, auth.UserUpdate(active=True), admin))
+    run(auth.update_user(bob_id, auth.UserUpdate(active=True), None, admin))
     assert status_of(me, c) == 401            # reactivating must not resurrect the old session
     assert me(login())["username"] == "bob"   # a fresh sign-in works
 

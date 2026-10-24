@@ -91,3 +91,8 @@ def test_restore_rejects_oversize_upload(monkeypatch):
     with pytest.raises(HTTPException) as e:
         asyncio.run(setup.restore_zip(Up()))
     assert e.value.status_code == 413
+
+
+def test_unknown_user_still_costs_a_password_check():
+    import auth
+    assert auth.verify_password("anything", auth._DUMMY_HASH) is False

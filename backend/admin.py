@@ -2,10 +2,11 @@ import json
 import re
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
 import llm
+from audit import audit
 from secrets_box import KEY_FIELDS, encrypt
 import prompts
 from auth import get_current_user, require_admin
@@ -54,6 +55,15 @@ async def public_settings(_: dict = Depends(get_current_user)):
     return _public(await llm.get_settings())
 
 
+@settings_router.get("/audit")
+async def audit_log(limit: int = 100, skip: int = 0, action: str = "", _: dict = Depends(require_admin)):
+    q = {"action": action} if action else {}
+    rows = await db.audit_log.find(q, {"_id": 0}).sort("at", -1).skip(max(0, skip)).limit(min(max(1, limit), 500)).to_list(500)
+    for r in rows:
+        r["at"] = r["at"].isoformat()
+    return rows
+
+
 @settings_router.get("")
 async def get_settings(_: dict = Depends(require_admin)):
     s = await llm.get_settings()
@@ -62,7 +72,7 @@ async def get_settings(_: dict = Depends(require_admin)):
 
 
 @settings_router.put("")
-async def update_settings(body: SettingsIn, admin: dict = Depends(require_admin)):
+async def update_settings(body: SettingsIn, request: Request, admin: dict = Depends(require_admin)):
     changes = {k: v.strip() if isinstance(v, str) and k != "extra_instructions" else v
                for k, v in body.model_dump(exclude_none=True).items()}
     for k in ("gemini_api_key", "openai_api_key"):
@@ -77,6 +87,7 @@ async def update_settings(body: SettingsIn, admin: dict = Depends(require_admin)
             changes[k] = encrypt(changes[k])
     changes.update({"updated_at": now_iso(), "updated_by": admin["username"]})
     await db.settings.update_one({"id": "app"}, {"$set": changes}, upsert=True)
+    await audit(request, "settings_updated", actor=admin, fields=sorted(k for k in changes if k not in ("updated_at", "updated_by")))
     return await get_settings(admin)
 
 

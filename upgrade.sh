@@ -20,6 +20,7 @@ cd "$APP_DIR"
 [[ -d .git ]] || die "$APP_DIR is not a git checkout. Reinstall with install.sh."
 [[ -f .env ]] || die "Missing $APP_DIR/.env"
 set -a; . ./.env; set +a
+[[ ${#JWT_SECRET} -ge 32 ]] || printf '\033[1;33m!\033[0m JWT_SECRET in .env is short (under 32 characters). Replace it with: openssl rand -hex 32 (everyone will need to sign in again).\n'
 
 # Upgrade code runs as root (docker build), so look at what is coming before applying it.
 review_incoming() {

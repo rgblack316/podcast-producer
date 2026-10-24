@@ -8,6 +8,7 @@ import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
+from audit import audit
 from core import db, now_iso, new_id, NO_ID
 
 JWT_ALGORITHM = "HS256"
@@ -24,6 +25,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+# Checked against when the username doesn't exist, so a missing user takes as long as a wrong password.
+_DUMMY_HASH = bcrypt.hashpw(b"timing-equaliser", bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
@@ -143,7 +148,7 @@ async def _is_locked(identifier: str) -> bool:
 async def _record_failure(identifier: str, limit: int):
     attempt = await db.login_attempts.find_one({"identifier": identifier}, NO_ID)
     count = (attempt or {}).get("count", 0) + 1
-    update = {"identifier": identifier, "count": count, "updated_at": now_iso()}
+    update = {"identifier": identifier, "count": count, "updated_at": now_iso(), "at": datetime.now(timezone.utc)}
     if count >= limit:
         update["locked_until"] = (datetime.now(timezone.utc) + timedelta(minutes=LOCKOUT_MINUTES)).isoformat()
         update["count"] = 0
@@ -156,10 +161,13 @@ async def login(body: LoginIn, request: Request, response: Response):
     identifier = f"{_client_ip(request)}:{username}"
     user_identifier = f"user:{username}"
     if await _is_locked(identifier) or await _is_locked(user_identifier):
+        await audit(request, "login_locked", target=username)
         raise HTTPException(status_code=429, detail="Too many failed attempts. Try again in 15 minutes.")
 
     user = await db.users.find_one({"username": username}, {"_id": 0})
-    if not user or not user.get("active", True) or not verify_password(body.password, user["password_hash"]):
+    password_ok = verify_password(body.password, user["password_hash"] if user else _DUMMY_HASH)
+    if not user or not user.get("active", True) or not password_ok:
+        await audit(request, "login_failed", target=username)
         await _record_failure(identifier, MAX_ATTEMPTS)
         await _record_failure(user_identifier, MAX_USER_ATTEMPTS)
         raise HTTPException(status_code=401, detail="Invalid username or password")
@@ -168,6 +176,7 @@ async def login(body: LoginIn, request: Request, response: Response):
     # MFA hook: when user["mfa_enabled"] is true, a TOTP challenge step will be inserted here (Phase 2).
     await db.users.update_one({"id": user["id"]}, {"$set": {"last_login_at": now_iso()}})
     set_auth_cookies(response, user, request)
+    await audit(request, "login", actor=user)
     return await db.users.find_one({"id": user["id"]}, USER_PUBLIC)
 
 
@@ -185,9 +194,17 @@ async def refresh(request: Request, response: Response):
 @router.post("/logout")
 async def logout(request: Request, response: Response):
     header = request.headers.get("Authorization", "")
+    who = None
     for t in (request.cookies.get("access_token"), request.cookies.get("refresh_token"),
               header[7:] if header.startswith("Bearer ") else None):
         await _revoke(t)
+        if t and who is None:
+            try:
+                who = await db.users.find_one({"id": jwt.decode(t, _secret(), algorithms=[JWT_ALGORITHM])["sub"]}, {"_id": 0, "id": 1, "username": 1})
+            except Exception:  # noqa: BLE001
+                pass
+    if who:
+        await audit(request, "logout", actor=who)
     response.delete_cookie("access_token", path="/")
     response.delete_cookie("refresh_token", path="/")
     return {"ok": True}
@@ -208,6 +225,7 @@ async def change_password(body: ChangePasswordIn, request: Request, response: Re
     await db.users.update_one({"id": user["id"]}, {"$set": {"password_hash": hash_password(body.new_password)},
                                                    "$inc": {"token_version": 1}})
     set_auth_cookies(response, await db.users.find_one({"id": user["id"]}, {"_id": 0, "id": 1, "token_version": 1}), request)
+    await audit(request, "password_changed", actor=user)
     return {"ok": True}
 
 
@@ -246,16 +264,17 @@ async def list_users(_: dict = Depends(require_admin)):
 
 
 @users_router.post("")
-async def create_user(body: UserCreate, _: dict = Depends(require_admin)):
+async def create_user(body: UserCreate, request: Request, admin: dict = Depends(require_admin)):
     if await db.users.find_one({"username": body.username.strip().lower()}):
         raise HTTPException(status_code=400, detail="Username already exists")
     doc = user_doc(body.username, body.name, body.password, body.role)
     await db.users.insert_one(doc)
+    await audit(request, "user_created", actor=admin, target=doc["username"], role=doc["role"])
     return await db.users.find_one({"id": doc["id"]}, USER_PUBLIC)
 
 
 @users_router.patch("/{user_id}")
-async def update_user(user_id: str, body: UserUpdate, admin: dict = Depends(require_admin)):
+async def update_user(user_id: str, body: UserUpdate, request: Request, admin: dict = Depends(require_admin)):
     changes = body.model_dump(exclude_none=True)
     if user_id == admin["id"] and (changes.get("active") is False or changes.get("role") == "producer"):
         raise HTTPException(status_code=400, detail="You cannot deactivate or demote your own account")
@@ -267,20 +286,23 @@ async def update_user(user_id: str, body: UserUpdate, admin: dict = Depends(requ
     user = await db.users.find_one({"id": user_id}, USER_PUBLIC)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    if changes:
+        await audit(request, "user_updated", actor=admin, target=user["username"], changes=changes)
     return user
 
 
 @users_router.post("/{user_id}/reset-password")
-async def reset_password(user_id: str, body: ResetPasswordIn, _: dict = Depends(require_admin)):
+async def reset_password(user_id: str, body: ResetPasswordIn, request: Request, admin: dict = Depends(require_admin)):
     res = await db.users.update_one({"id": user_id}, {"$set": {"password_hash": hash_password(body.new_password)},
                                                       "$inc": {"token_version": 1}})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
+    await audit(request, "password_reset", actor=admin, target=user_id)
     return {"ok": True}
 
 
 @users_router.delete("/{user_id}")
-async def delete_user(user_id: str, admin: dict = Depends(require_admin)):
+async def delete_user(user_id: str, request: Request, admin: dict = Depends(require_admin)):
     if user_id == admin["id"]:
         raise HTTPException(status_code=400, detail="You cannot delete your own account")
     user = await db.users.find_one({"id": user_id}, USER_PUBLIC)
@@ -289,6 +311,7 @@ async def delete_user(user_id: str, admin: dict = Depends(require_admin)):
     if user["role"] == "admin" and await db.users.count_documents({"role": "admin", "active": True, "id": {"$ne": user_id}}) == 0:
         raise HTTPException(status_code=400, detail="At least one active admin must remain")
     await db.users.delete_one({"id": user_id})
+    await audit(request, "user_deleted", actor=admin, target=user["username"])
     await db.login_attempts.delete_many({"identifier": {"$regex": f":{re.escape(user['username'])}$"}})
     return {"ok": True}
 

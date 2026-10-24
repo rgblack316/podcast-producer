@@ -14,7 +14,7 @@ export function BackupButton({ className = "" }) {
     setBusy(true);
     try {
       await downloadFile("/backup", `bible-bytes-backup-${new Date().toISOString().slice(0, 10)}.zip`);
-      toast.success("Backup downloaded. Store it somewhere safe; it contains API keys and account data.");
+      toast.success("Backup downloaded. Store it somewhere safe; it contains account data (AI keys are not included).");
     } catch (e) { toast.error(errMsg(e)); } finally { setBusy(false); }
   };
   return (
