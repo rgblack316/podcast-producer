@@ -13,6 +13,12 @@ MEDIA_DIR = Path(os.environ["MEDIA_DIR"])
 _UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 
+def is_image(data: bytes) -> bool:
+    """True only for real PNG, JPEG or WebP data (checks the file's own signature, not the claimed type)."""
+    return (data.startswith(b"\x89PNG\r\n\x1a\n") or data.startswith(b"\xff\xd8\xff")
+            or (data[:4] == b"RIFF" and data[8:12] == b"WEBP"))
+
+
 def _safe(*segments: str) -> Path:
     root = os.path.realpath(MEDIA_DIR)
     full = os.path.realpath(os.path.join(root, *segments))

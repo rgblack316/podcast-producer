@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api, errMsg } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 export const COLORS = ["#B45309", "#3F6212", "#0369A1", "#6B21A8", "#BE123C", "#0F766E", "#A16207", "#44403C"];
 
 export function SeriesDialog({ series, open, onClose, onSaved }) {
+  const { user } = useAuth();
   const [f, setF] = useState({ name: "", description: "", color: COLORS[0] });
   useEffect(() => { if (open) setF(series ? { name: series.name, description: series.description, color: series.color } : { name: "", description: "", color: COLORS[0] }); }, [open, series]);
   const save = async () => {
@@ -44,7 +46,7 @@ export function SeriesDialog({ series, open, onClose, onSaved }) {
           </div>
         </div>
         <DialogFooter className="gap-2 sm:justify-between">
-          {series ? <Button variant="ghost" className="text-red-700" onClick={remove} data-testid="series-delete-btn">Delete</Button> : <span />}
+          {series && user?.role === "admin" ? <Button variant="ghost" className="text-red-700" onClick={remove} data-testid="series-delete-btn">Delete</Button> : <span />}
           <Button onClick={save} disabled={!f.name.trim()} data-testid="series-save-btn">Save series</Button>
         </DialogFooter>
       </DialogContent>
