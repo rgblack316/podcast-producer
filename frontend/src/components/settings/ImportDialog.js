@@ -13,7 +13,7 @@ const EMPTY = { title: "", episode_number: "", topic: "", primary_scripture: "",
 export function ImportDialog({ doc, onClose, onDone }) {
   const [f, setF] = useState(EMPTY);
   const [busy, setBusy] = useState(null);
-  useEffect(() => { if (doc) setF({ ...EMPTY, title: doc.filename.replace(/\.docx$/i, "") }); }, [doc]);
+  useEffect(() => { if (doc) setF({ ...EMPTY, title: doc.filename.replace(/\.[a-z0-9]+$/i, "") }); }, [doc]);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
 
   const suggest = async () => {

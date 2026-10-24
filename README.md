@@ -29,7 +29,7 @@ Everything runs on your own server with Docker. The app calls **Google Gemini** 
 | Area | What you get |
 |---|---|
 | **Episode workflow** | Intake form, then AI outline (revise with notes, edit by hand, version history, approve), then AI full script (same loop), then mark complete and published. Export to `.docx` or copy the text. |
-| **Reference documents** | Upload your planning template and example episodes as `.docx` files. The AI follows them for structure and tone. |
+| **Reference documents** | Upload your planning template and example episodes (`.docx`, `.pdf`, `.md`, `.txt`, `.rtf`, `.odt`, `.html` and other text formats). The AI follows them for structure and tone. |
 | **Show notes** | One click turns a finished script into show notes, an episode description, and Instagram, Facebook, X and YouTube captions. |
 | **Artwork studio** | Brainstorm with an AI art director, pick a concept, edit the prompt, then generate square cover art (Gemini "Nano Banana" or OpenAI GPT Image). |
 | **RSS import** | Pull your back catalog from the feed. The app uses transcripts when the feed has them and show notes otherwise. The AI suggests topic, scripture and themes for you to review before import. Feed artwork and show notes are copied in too. |
@@ -101,7 +101,7 @@ After setup:
 1. **Settings → AI provider & keys**: add keys and click **Test connection**. Choose the text and image models.
    - Gemini key: https://aistudio.google.com/apikey
    - OpenAI key: https://platform.openai.com/api-keys
-2. **Settings → Reference documents**: upload the planning template and example `.docx` episodes.
+2. **Settings → Reference documents**: upload the planning template and example episodes (Word, PDF, Markdown, text and more).
 3. **Import**: paste your RSS feed URL and bring in the back catalog.
 4. **Settings → Users**: add your team as Admins or Producers.
 
@@ -273,5 +273,5 @@ frontend/src/
 
 ## Notes
 - Scripture references are free text. The app doesn't fetch verse text, so check quotations against your preferred translation.
-- Only text is extracted from uploaded `.docx` files. Exported `.docx` files use clean, simple formatting.
+- Only text is extracted from uploaded reference documents (scanned PDFs and images are not supported). Exported `.docx` files use clean, simple formatting.
 - AI usage is billed by Google or OpenAI to your own keys.

@@ -11,7 +11,7 @@ from secrets_box import KEY_FIELDS, encrypt
 import prompts
 from auth import get_current_user, require_admin
 from core import db, now_iso, new_id, NO_ID
-from docx_utils import extract_text
+from doc_extract import SUPPORTED, UnsupportedDocument, ext_of, extract
 from episodes import new_episode
 
 settings_router = APIRouter(prefix="/settings", tags=["settings"])
@@ -129,17 +129,19 @@ async def get_document(doc_id: str, _: dict = Depends(get_current_user)):
 async def upload_document(file: UploadFile = File(...), kind: str = Form(...), admin: dict = Depends(require_admin)):
     if kind not in ("template", "example"):
         raise HTTPException(status_code=400, detail="kind must be template or example")
-    if not (file.filename or "").lower().endswith(".docx"):
-        raise HTTPException(status_code=400, detail="Only .docx files are supported")
+    if ext_of(file.filename) not in SUPPORTED:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type. Use one of: {', '.join(SUPPORTED)}")
     data = await file.read()
     if len(data) > MAX_UPLOAD:
         raise HTTPException(status_code=400, detail="File is larger than 15 MB")
     try:
-        text = extract_text(data)
+        text = extract(file.filename, data)
+    except UnsupportedDocument as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception:
-        raise HTTPException(status_code=400, detail="Could not read this .docx file")
+        raise HTTPException(status_code=400, detail="Could not read this file")
     if not text.strip():
-        raise HTTPException(status_code=400, detail="No text found in this document")
+        raise HTTPException(status_code=400, detail="No text found in this document (scanned PDFs and images are not supported)")
     if kind == "template":
         await db.documents.update_many({"kind": "template"}, {"$set": {"active": False}})
     doc = {"id": new_id(), "kind": kind, "filename": file.filename, "text": text, "active": True,
