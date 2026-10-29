@@ -176,6 +176,20 @@ async def suggest_topics(body: SuggestIn, user: dict = Depends(ai_rate_limit)):
     return {"suggestions": clean}
 
 
+@router.delete("/coverage/suggestions/{suggestion_id}")
+async def delete_suggestion(suggestion_id: str, _: dict = Depends(get_current_user)):
+    res = await db.coverage_suggestions.update_one({"id": "latest"}, {"$pull": {"items": {"id": suggestion_id}}})
+    if res.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Suggestion not found")
+    return {"ok": True}
+
+
+@router.delete("/coverage/suggestions")
+async def clear_suggestions(_: dict = Depends(get_current_user)):
+    await db.coverage_suggestions.update_one({"id": "latest"}, {"$set": {"items": []}, "$unset": {"created_at": ""}})
+    return {"ok": True}
+
+
 # ---------- Artwork studio ----------
 class BrainstormIn(BaseModel):
     provider: Optional[str] = None

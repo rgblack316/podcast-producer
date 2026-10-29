@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CalendarPlus, Lightbulb, Loader2, Plus } from "lucide-react";
+import { CalendarPlus, Lightbulb, Loader2, Plus, Trash2 } from "lucide-react";
 import { PlanItemDialog } from "@/components/planner/PlanItemDialog";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -95,7 +95,7 @@ function Themes({ themes }) {
   );
 }
 
-function Suggestions({ data, onNew }) {
+function Suggestions({ data, onNew, onChange }) {
   const navigate = useNavigate();
   const [focus, setFocus] = useState("");
   const [busy, setBusy] = useState(false);
@@ -106,6 +106,20 @@ function Suggestions({ data, onNew }) {
       onNew(r.suggestions);
       toast.success("New topic ideas ready");
     } catch (e) { toast.error(errMsg(e)); } finally { setBusy(false); }
+  };
+  const remove = async (s) => {
+    try {
+      await api.delete(`/coverage/suggestions/${s.id}`);
+      onChange({ ...data, suggestions: data.suggestions.filter((x) => x.id !== s.id) });
+    } catch (e) { toast.error(errMsg(e)); }
+  };
+  const clearAll = async () => {
+    if (!window.confirm("Clear all suggested topics? Items you already added to the planner or started as episodes are not affected.")) return;
+    try {
+      await api.delete("/coverage/suggestions");
+      onChange({ ...data, suggestions: [], suggested_at: null });
+      toast.success("Suggestions cleared");
+    } catch (e) { toast.error(errMsg(e)); }
   };
   const start = (s) => navigate("/episodes/new", { state: { prefill: s } });
   const [plan, setPlan] = useState(null);
@@ -126,6 +140,11 @@ function Suggestions({ data, onNew }) {
           <Button onClick={run} disabled={busy} className="rounded-full shrink-0" data-testid="coverage-suggest-btn">
             {busy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Lightbulb className="h-4 w-4 mr-1.5" />} Suggest
           </Button>
+          {data.suggestions.length > 0 && (
+            <Button variant="outline" onClick={clearAll} className="rounded-full shrink-0 bg-[#FFFDF9]" data-testid="coverage-clear-btn">
+              <Trash2 className="h-4 w-4 mr-1.5" /> Clear all
+            </Button>
+          )}
         </div>
       </div>
       {!data.suggestions.length ? <p className="text-sm text-stone-500 italic">Ask the AI for ideas based on the books and themes you haven't covered yet.</p> : (
@@ -140,6 +159,7 @@ function Suggestions({ data, onNew }) {
               <div className="flex gap-2 mt-1">
                 <Button size="sm" variant="outline" className="bg-[#FFFDF9] w-fit" onClick={() => start(s)} data-testid={`suggestion-start-${s.id}`}><Plus className="h-4 w-4 mr-1" /> Start episode</Button>
                 <Button size="sm" variant="ghost" onClick={() => addToPlan(s)} data-testid={`suggestion-plan-${s.id}`}><CalendarPlus className="h-4 w-4 mr-1" /> Add to plan</Button>
+                <Button size="sm" variant="ghost" className="text-red-700 hover:text-red-800 ml-auto" onClick={() => remove(s)} data-testid={`suggestion-delete-${s.id}`}><Trash2 className="h-4 w-4 mr-1" /> Delete</Button>
               </div>
             </div>
           ))}
@@ -161,7 +181,7 @@ export default function Coverage() {
         <h1 className="f-serif text-4xl sm:text-5xl font-semibold tracking-tight text-[#1C1917] mt-2">What we've covered</h1>
         <p className="text-[#44403C] mt-2">{data.total} episodes across {data.books.filter((b) => b.count).length} of 66 books.</p>
       </div>
-      <Suggestions data={data} onNew={(s) => setData({ ...data, suggestions: s, suggested_at: new Date().toISOString() })} />
+      <Suggestions data={data} onChange={setData} onNew={(s) => setData({ ...data, suggestions: s, suggested_at: new Date().toISOString() })} />
       <div className="grid lg:grid-cols-2 gap-6">
         <BookGrid books={data.books} testament="OT" label="Old Testament" />
         <BookGrid books={data.books} testament="NT" label="New Testament" />
