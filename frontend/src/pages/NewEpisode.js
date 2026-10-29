@@ -27,6 +27,8 @@ export default function NewEpisode() {
         await api.post(`/episodes/${data.id}/outline/generate`, { notes: "" })
           .catch((e) => toast.error(`Episode saved, but outline could not start: ${errMsg(e)}`));
       }
+      const used = location.state?.suggestion_id;  // started from a coverage suggestion: it is now used up
+      if (used) await api.delete(`/coverage/suggestions/${used}`).catch(() => {});
       toast.success("Episode created");
       navigate(`/episodes/${data.id}`);
     } catch (e) {

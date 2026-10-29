@@ -107,11 +107,17 @@ function Suggestions({ data, onNew, onChange }) {
       toast.success("New topic ideas ready");
     } catch (e) { toast.error(errMsg(e)); } finally { setBusy(false); }
   };
+  const dropFromList = (id) => onChange({ ...data, suggestions: data.suggestions.filter((x) => x.id !== id) });
   const remove = async (s) => {
     try {
       await api.delete(`/coverage/suggestions/${s.id}`);
-      onChange({ ...data, suggestions: data.suggestions.filter((x) => x.id !== s.id) });
+      dropFromList(s.id);
     } catch (e) { toast.error(errMsg(e)); }
+  };
+  // A suggestion is used up once it becomes a planner item (or an episode, see NewEpisode)
+  const planned = async (id) => {
+    await api.delete(`/coverage/suggestions/${id}`).catch(() => {});
+    dropFromList(id);
   };
   const clearAll = async () => {
     if (!window.confirm("Clear all suggested topics? Items you already added to the planner or started as episodes are not affected.")) return;
@@ -121,11 +127,13 @@ function Suggestions({ data, onNew, onChange }) {
       toast.success("Suggestions cleared");
     } catch (e) { toast.error(errMsg(e)); }
   };
-  const start = (s) => navigate("/episodes/new", { state: { prefill: s } });
+  const start = (s) => navigate("/episodes/new", { state: { prefill: s, suggestion_id: s.id } });
   const [plan, setPlan] = useState(null);
+  const [planFrom, setPlanFrom] = useState(null);
   const [series, setSeries] = useState([]);
   const addToPlan = async (s) => {
     setSeries((await api.get("/series")).data);
+    setPlanFrom(s.id);
     setPlan({ title: s.title, topic: s.topic, primary_scripture: s.primary_scripture, supporting_scriptures: s.supporting_scriptures, themes: s.themes, notes: s.why });
   };
   return (
@@ -165,7 +173,7 @@ function Suggestions({ data, onNew, onChange }) {
           ))}
         </div>
       )}
-      {plan && <PlanItemDialog item={plan} series={series} onClose={() => setPlan(null)} onSaved={() => {}} />}
+      {plan && <PlanItemDialog item={plan} series={series} onClose={() => setPlan(null)} onSaved={() => planned(planFrom)} />}
     </div>
   );
 }
