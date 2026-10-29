@@ -39,6 +39,16 @@ def run(client):
     assert client.post("/api/auth/login", json={"username": "admin", "password": "bad"}).status_code == 401
     assert client.post("/api/auth/login", json={"username": "admin", "password": "correct horse 1"}).status_code == 200
     assert client.get("/api/auth/me").status_code == 200
+    # coverage suggestions: delete one, then clear all
+    import asyncio, core
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(core.db.coverage_suggestions.update_one({"id": "latest"}, {"$set": {"items": [{"id": "a"}, {"id": "b"}], "created_at": "x"}}, upsert=True))
+    assert client.delete("/api/coverage/suggestions/a").status_code == 200
+    assert [i["id"] for i in client.get("/api/coverage").json()["suggestions"]] == ["b"]
+    assert client.delete("/api/coverage/suggestions/a").status_code == 404
+    assert client.delete("/api/coverage/suggestions").status_code == 200
+    cov = client.get("/api/coverage").json()
+    assert cov["suggestions"] == [] and not cov["suggested_at"]
     # audit trail recorded the events, without secrets
     rows = client.get("/api/settings/audit").json()
     actions = [r["action"] for r in rows]
